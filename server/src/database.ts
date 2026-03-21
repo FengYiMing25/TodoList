@@ -1,0 +1,154 @@
+import initSqlJs, { Database } from "sql.js";
+import fs from "fs";
+import path from "path";
+
+let db: Database;
+const dbPath = path.resolve(__dirname, "../data.db");
+
+export const initDatabase = async (): Promise<void> => {
+  const SQL = await initSqlJs();
+
+  if (fs.existsSync(dbPath)) {
+    const buffer = fs.readFileSync(dbPath);
+    db = new SQL.Database(buffer);
+  } else {
+    db = new SQL.Database();
+  }
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      avatar TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS categories (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      color TEXT NOT NULL,
+      icon TEXT,
+      user_id TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS tags (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      color TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS todos (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      status TEXT DEFAULT 'pending',
+      priority TEXT DEFAULT 'medium',
+      due_date DATETIME,
+      category_id TEXT,
+      user_id TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS todo_tags (
+      todo_id TEXT NOT NULL,
+      tag_id TEXT NOT NULL,
+      PRIMARY KEY (todo_id, tag_id),
+      FOREIGN KEY (todo_id) REFERENCES todos(id) ON DELETE CASCADE,
+      FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS attachments (
+      id TEXT PRIMARY KEY,
+      filename TEXT NOT NULL,
+      original_name TEXT NOT NULL,
+      mime_type TEXT NOT NULL,
+      size INTEGER NOT NULL,
+      url TEXT NOT NULL,
+      todo_id TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (todo_id) REFERENCES todos(id) ON DELETE CASCADE
+    )
+  `);
+
+  saveDatabase();
+  console.log("Database initialized successfully");
+};
+
+export const saveDatabase = (): void => {
+  const data = db.export();
+  const buffer = Buffer.from(data);
+  fs.writeFileSync(dbPath, buffer);
+};
+
+export default {
+  run: (sql: string, params: unknown[] = []): void => {
+    try {
+      db.run(sql, params);
+      saveDatabase();
+    } catch (error) {
+      console.error('Database run error:', error);
+      console.error('SQL:', sql);
+      console.error('Params:', params);
+      throw error;
+    }
+  },
+  get: <T>(sql: string, params: unknown[] = []): T | undefined => {
+    try {
+      const result = db.exec(sql, params);
+      if (result.length === 0 || result[0].values.length === 0) return undefined;
+      const columns = result[0].columns;
+      const values = result[0].values[0];
+      const obj: Record<string, unknown> = {};
+      columns.forEach((col: string, i: number) => {
+        obj[col] = values[i];
+      });
+      return obj as T;
+    } catch (error) {
+      console.error('Database get error:', error);
+      console.error('SQL:', sql);
+      console.error('Params:', params);
+      throw error;
+    }
+  },
+  all: <T>(sql: string, params: unknown[] = []): T[] => {
+    try {
+      const result = db.exec(sql, params);
+      if (result.length === 0) return [];
+      const columns = result[0].columns;
+      return result[0].values.map((values: unknown[]) => {
+        const obj: Record<string, unknown> = {};
+        columns.forEach((col: string, i: number) => {
+          obj[col] = values[i];
+        });
+        return obj as T;
+      });
+    } catch (error) {
+      console.error('Database all error:', error);
+      console.error('SQL:', sql);
+      console.error('Params:', params);
+      throw error;
+    }
+  },
+};
