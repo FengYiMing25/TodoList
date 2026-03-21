@@ -7,6 +7,7 @@ import todoRoutes from "./routes/todos";
 import categoryRoutes from "./routes/categories";
 import tagRoutes from "./routes/tags";
 import uploadRoutes from "./routes/upload";
+import accountRoutes from "./routes/accounts";
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ app.use("/api/todos", todoRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/tags", tagRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/accounts", accountRoutes);
 app.use("/uploads", express.static("uploads"));
 
 app.get("/api/health", (_, res) => {

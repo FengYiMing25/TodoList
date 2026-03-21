@@ -9,6 +9,7 @@ import TodoList from '@pages/TodoList'
 import Categories from '@pages/Categories'
 import Settings from '@pages/Settings'
 import NotFound from '@pages/NotFound'
+import AccountBook from '@pages/AccountBook'
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuthStore()
@@ -67,6 +68,7 @@ function App() {
       >
         <Route index element={<Dashboard />} />
         <Route path="todos" element={<TodoList />} />
+        <Route path="accounts" element={<AccountBook />} />
         <Route path="categories" element={<Categories />} />
         <Route path="settings" element={<Settings />} />
       </Route>

@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom'
 import { Box, AppBar, Toolbar, Typography, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, IconButton, Avatar, Menu, MenuItem, Divider } from '@mui/material'
-import { Dashboard as DashboardIcon, Checklist, Category, Settings, Logout, AccountCircle } from '@mui/icons-material'
+import { Dashboard as DashboardIcon, Checklist, Category, Settings, Logout, AccountCircle, AccountBalanceWallet } from '@mui/icons-material'
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@stores/authStore'
@@ -11,6 +11,7 @@ const drawerWidth = 240
 const menuItems = [
   { text: '仪表盘', icon: <DashboardIcon />, path: '/' },
   { text: '待办事项', icon: <Checklist />, path: '/todos' },
+  { text: '记账本', icon: <AccountBalanceWallet />, path: '/accounts' },
   { text: '分类管理', icon: <Category />, path: '/categories' },
   { text: '设置', icon: <Settings />, path: '/settings' },
 ]

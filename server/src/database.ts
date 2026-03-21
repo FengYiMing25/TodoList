@@ -92,6 +92,21 @@ export const initDatabase = async (): Promise<void> => {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS accounts (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      category TEXT NOT NULL,
+      amount REAL NOT NULL,
+      description TEXT,
+      date TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
   saveDatabase();
   console.log("Database initialized successfully");
 };
