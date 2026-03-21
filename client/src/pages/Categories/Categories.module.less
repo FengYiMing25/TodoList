@@ -1,0 +1,91 @@
+.container {
+  padding: 24px;
+}
+
+.pageTitle {
+  margin-bottom: 24px;
+  font-weight: 600;
+}
+
+.header {
+  margin-bottom: 24px;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.itemCard {
+  border-radius: 12px;
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+}
+
+.itemContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.itemHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.itemName {
+  font-weight: 500;
+}
+
+.itemActions {
+  display: flex;
+  gap: 4px;
+}
+
+.colorDot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+}
+
+.colorPicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.colorOption {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.2s;
+  border: 2px solid transparent;
+
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+.colorSelected {
+  border-color: #000;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.2);
+}
