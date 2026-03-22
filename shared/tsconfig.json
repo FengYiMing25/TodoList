@@ -12,10 +12,10 @@
     "rootDir": ".",
     "baseUrl": ".",
     "paths": {
-      "@shared/types": ["./shared/types"],
-      "@shared/types/*": ["./shared/types/*"]
+      "@shared/types": ["./types"],
+      "@shared/types/*": ["./types/*"]
     }
   },
-  "include": ["shared/**/*"],
-  "exclude": ["node_modules", "dist", "client", "server"]
+  "include": ["types/**/*"],
+  "exclude": ["node_modules", "dist"]
 }
