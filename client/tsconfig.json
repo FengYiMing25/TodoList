@@ -23,6 +23,7 @@
       "@stores/*": ["src/stores/*"],
       "@services/*": ["src/services/*"],
       "@styles/*": ["src/styles/*"],
+      "@hooks": ["src/hooks"],
       "@hooks/*": ["src/hooks/*"],
       "@utils/*": ["src/utils/*"],
       "@types": ["src/types"],

@@ -1,6 +1,7 @@
 import initSqlJs, { Database } from "sql.js";
 import fs from "fs";
 import path from "path";
+import { v4 as uuidv4 } from "uuid";
 
 let db: Database;
 const dbPath = path.resolve(__dirname, "../data.db");
@@ -52,6 +53,39 @@ export const initDatabase = async (): Promise<void> => {
   `);
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS dictionaries (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      name TEXT NOT NULL,
+      color TEXT NOT NULL,
+      icon TEXT,
+      sort_order INTEGER DEFAULT 0,
+      user_id TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run(`
+    CREATE INDEX IF NOT EXISTS idx_dictionaries_type_user ON dictionaries(type, user_id)
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS dictionary_types (
+      id TEXT PRIMARY KEY,
+      key TEXT UNIQUE NOT NULL,
+      label TEXT NOT NULL,
+      description TEXT,
+      icon TEXT,
+      sort_order INTEGER DEFAULT 0,
+      user_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS todos (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
@@ -97,7 +131,7 @@ export const initDatabase = async (): Promise<void> => {
     const tableInfo = db.exec("PRAGMA table_info(attachments)");
     if (tableInfo.length > 0) {
       const columns = tableInfo[0].values.map((col) => col[1] as string);
-      
+
       if (!columns.includes("entity_type")) {
         db.run("ALTER TABLE attachments ADD COLUMN entity_type TEXT");
       }
@@ -158,7 +192,7 @@ export const saveDatabase = (): void => {
 };
 
 const normalizeParams = (params: unknown[]): unknown[] => {
-  return params.map(p => (p === undefined ? null : p));
+  return params.map((p) => (p === undefined ? null : p));
 };
 
 export default {
@@ -167,9 +201,9 @@ export default {
       db.run(sql, normalizeParams(params));
       saveDatabase();
     } catch (error) {
-      console.error('Database run error:', error);
-      console.error('SQL:', sql);
-      console.error('Params:', params);
+      console.error("Database run error:", error);
+      console.error("SQL:", sql);
+      console.error("Params:", params);
       throw error;
     }
   },
@@ -185,9 +219,9 @@ export default {
       });
       return obj as T;
     } catch (error) {
-      console.error('Database get error:', error);
-      console.error('SQL:', sql);
-      console.error('Params:', params);
+      console.error("Database get error:", error);
+      console.error("SQL:", sql);
+      console.error("Params:", params);
       throw error;
     }
   },
@@ -204,9 +238,9 @@ export default {
         return obj as T;
       });
     } catch (error) {
-      console.error('Database all error:', error);
-      console.error('SQL:', sql);
-      console.error('Params:', params);
+      console.error("Database all error:", error);
+      console.error("SQL:", sql);
+      console.error("Params:", params);
       throw error;
     }
   },

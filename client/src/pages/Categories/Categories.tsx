@@ -2,167 +2,284 @@ import { useEffect, useState } from 'react'
 import {
   Card,
   Button,
-  Tabs,
   Row,
   Col,
   Modal,
   Form,
   Input,
-  Tag,
   Popconfirm,
+  Empty,
+  Spin,
+  Tooltip,
+  Badge,
+  Menu,
+  Typography,
+  Divider,
+  Dropdown,
 } from 'antd'
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
+  TagOutlined,
+  SearchOutlined,
+  MoreOutlined,
+  AppstoreAddOutlined,
 } from '@ant-design/icons'
-import { useCategoryStore } from '@stores/categoryStore'
+import { useDictionaryStore } from '@stores/dictionaryStore'
+import { useIsMobile } from '@hooks'
 import { useMessage } from '@hooks/useMessage'
-import type { Category, Tag as TagType, CreateCategoryRequest, CreateTagRequest } from '@types'
+import type {
+  Dictionary,
+  CreateDictionaryRequest,
+  UpdateDictionaryRequest,
+  DictionaryType,
+  DictionaryTypeConfig,
+  CreateDictionaryTypeRequest,
+  UpdateDictionaryTypeRequest,
+} from '@types'
 import styles from './Categories.module.less'
 
 const predefinedColors = [
-  '#1890ff', '#52c41a', '#faad14', '#ff4d4f', '#722ed1',
-  '#13c2c2', '#eb2f96', '#fa8c16', '#a0d911', '#2f54eb',
+  '#1890ff',
+  '#52c41a',
+  '#faad14',
+  '#ff4d4f',
+  '#722ed1',
+  '#13c2c2',
+  '#eb2f96',
+  '#fa8c16',
+  '#a0d911',
+  '#2f54eb',
 ]
 
 const Categories: React.FC = () => {
   const {
-    categories,
-    tags,
-    fetchCategories,
-    createCategory,
-    updateCategory,
-    deleteCategory,
-    fetchTags,
-    createTag,
-    deleteTag,
-  } = useCategoryStore()
+    isLoading,
+    dictionaryTypes,
+    fetchDictionaries,
+    createDictionary,
+    updateDictionary,
+    deleteDictionary,
+    getDictionariesByType,
+    fetchDictionaryTypes,
+    createDictionaryType,
+    updateDictionaryType,
+    deleteDictionaryType,
+  } = useDictionaryStore()
 
-  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
-  const [tagDialogOpen, setTagDialogOpen] = useState(false)
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null)
-  const [editingTag, setEditingTag] = useState<TagType | null>(null)
-  const [categoryForm] = Form.useForm()
-  const [tagForm] = Form.useForm()
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [typeDialogOpen, setTypeDialogOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<Dictionary | null>(null)
+  const [editingType, setEditingType] = useState<DictionaryTypeConfig | null>(null)
+  const [currentType, setCurrentType] = useState<DictionaryType>('')
+  const [searchText, setSearchText] = useState('')
+  const [form] = Form.useForm()
+  const [typeForm] = Form.useForm()
   const message = useMessage()
+  const isMobile = useIsMobile()
 
   useEffect(() => {
-    fetchCategories()
-    fetchTags()
-  }, [fetchCategories, fetchTags])
+    fetchDictionaries()
+    fetchDictionaryTypes()
+  }, [fetchDictionaries, fetchDictionaryTypes])
 
-  const handleOpenCategoryDialog = (category?: Category) => {
-    if (category) {
-      setEditingCategory(category)
-      categoryForm.setFieldsValue({
-        name: category.name,
-        color: category.color,
-        icon: category.icon || '',
+  useEffect(() => {
+    if (dictionaryTypes.length > 0 && !currentType) {
+      setCurrentType(dictionaryTypes[0].key)
+    }
+  }, [dictionaryTypes, currentType])
+
+  const handleOpenDialog = (type: DictionaryType, item?: Dictionary) => {
+    setCurrentType(type)
+    if (item) {
+      setEditingItem(item)
+      form.setFieldsValue({
+        name: item.name,
+        color: item.color,
+        icon: item.icon || '',
       })
     } else {
-      setEditingCategory(null)
-      categoryForm.resetFields()
-      categoryForm.setFieldsValue({ color: predefinedColors[0] })
+      setEditingItem(null)
+      form.resetFields()
+      form.setFieldsValue({ color: predefinedColors[0] })
     }
-    setCategoryDialogOpen(true)
+    setDialogOpen(true)
   }
 
-  const handleCloseCategoryDialog = () => {
-    setCategoryDialogOpen(false)
-    setEditingCategory(null)
-    categoryForm.resetFields()
+  const handleCloseDialog = () => {
+    setDialogOpen(false)
+    setEditingItem(null)
+    form.resetFields()
   }
 
-  const handleSubmitCategory = async () => {
+  const handleSubmit = async () => {
     try {
-      const values = await categoryForm.validateFields()
-      if (editingCategory) {
-        await updateCategory(editingCategory.id, values)
+      const values = await form.validateFields()
+      if (editingItem) {
+        await updateDictionary(editingItem.id, values as UpdateDictionaryRequest)
         message.success('更新成功')
       } else {
-        await createCategory(values as CreateCategoryRequest)
+        await createDictionary({
+          ...values,
+          type: currentType,
+        } as CreateDictionaryRequest)
         message.success('创建成功')
       }
-      handleCloseCategoryDialog()
+      handleCloseDialog()
     } catch (error) {
       message.error('操作失败')
     }
   }
 
-  const handleDeleteCategory = async (id: string) => {
+  const handleDelete = async (id: string) => {
     try {
-      await deleteCategory(id)
+      await deleteDictionary(id)
       message.success('删除成功')
     } catch (error) {
       message.error('删除失败')
     }
   }
 
-  const handleOpenTagDialog = (tag?: TagType) => {
-    if (tag) {
-      setEditingTag(tag)
-      tagForm.setFieldsValue({
-        name: tag.name,
-        color: tag.color,
+  const handleOpenTypeDialog = (type?: DictionaryTypeConfig) => {
+    if (type) {
+      setEditingType(type)
+      typeForm.setFieldsValue({
+        key: type.key,
+        label: type.label,
+        description: type.description || '',
       })
     } else {
-      setEditingTag(null)
-      tagForm.resetFields()
-      tagForm.setFieldsValue({ color: predefinedColors[0] })
+      setEditingType(null)
+      typeForm.resetFields()
     }
-    setTagDialogOpen(true)
+    setTypeDialogOpen(true)
   }
 
-  const handleCloseTagDialog = () => {
-    setTagDialogOpen(false)
-    setEditingTag(null)
-    tagForm.resetFields()
+  const handleCloseTypeDialog = () => {
+    setTypeDialogOpen(false)
+    setEditingType(null)
+    typeForm.resetFields()
   }
 
-  const handleSubmitTag = async () => {
+  const handleSubmitType = async () => {
     try {
-      const values = await tagForm.validateFields()
-      if (editingTag) {
-        message.info('标签更新功能开发中')
+      const values = await typeForm.validateFields()
+      if (editingType) {
+        await updateDictionaryType(editingType.key, {
+          label: values.label,
+          description: values.description,
+        } as UpdateDictionaryTypeRequest)
+        message.success('更新成功')
       } else {
-        await createTag(values as CreateTagRequest)
+        await createDictionaryType(values as CreateDictionaryTypeRequest)
         message.success('创建成功')
+        setCurrentType(values.key)
       }
-      handleCloseTagDialog()
+      handleCloseTypeDialog()
     } catch (error) {
       message.error('操作失败')
     }
   }
 
-  const handleDeleteTag = async (id: string) => {
+  const handleDeleteType = async (key: string) => {
     try {
-      await deleteTag(id)
+      await deleteDictionaryType(key)
       message.success('删除成功')
-    } catch (error) {
-      message.error('删除失败')
+      if (currentType === key && dictionaryTypes.length > 0) {
+        setCurrentType(dictionaryTypes[0].key)
+      }
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } }
+      message.error(err.response?.data?.message || '删除失败')
     }
   }
 
-  const categoryItems = [
-    {
-      key: 'categories',
-      label: `分类 (${categories.length})`,
-      children: (
-        <div>
+  const getFilteredItems = (type: DictionaryType) => {
+    const items = getDictionariesByType(type)
+    if (!searchText) return items
+    return items.filter((item) =>
+      item.name.toLowerCase().includes(searchText.toLowerCase())
+    )
+  }
+
+  const renderTypeContent = (type: DictionaryType) => {
+    const items = getFilteredItems(type)
+    const config = dictionaryTypes.find((c) => c.key === type)
+
+    if (isMobile) {
+      return (
+        <div className={styles.mobileContainer}>
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionTitle}>分类列表</span>
+            <span className={styles.sectionTitle}>{config?.description || config?.label}</span>
+            <div className={styles.headerActions}>
+              <Button
+                type="primary"
+                size="small"
+                icon={<PlusOutlined />}
+                onClick={() => handleOpenDialog(type)}
+              >
+                新建
+              </Button>
+            </div>
+          </div>
+          {items.length === 0 ? (
+            <Empty description="暂无数据" />
+          ) : (
+            <div className={styles.mobileList}>
+              {items.map((item) => (
+                <div key={item.id} className={styles.mobileItem}>
+                  <div className={styles.mobileItemContent}>
+                    <div
+                      className={styles.colorDot}
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className={styles.itemName}>{item.name}</span>
+                  </div>
+                  <div className={styles.mobileItemActions}>
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<EditOutlined />}
+                      onClick={() => handleOpenDialog(type, item)}
+                    />
+                    <Popconfirm
+                      title="确定要删除吗？"
+                      onConfirm={() => handleDelete(item.id)}
+                      okText="确定"
+                      cancelText="取消"
+                    >
+                      <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+                    </Popconfirm>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    return (
+      <div>
+        <div className={styles.sectionHeader}>
+          <span className={styles.sectionTitle}>{config?.description || config?.label}</span>
+          <div className={styles.headerActions}>
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              onClick={() => handleOpenCategoryDialog()}
+              onClick={() => handleOpenDialog(type)}
             >
-              新建分类
+              新建{config?.label}
             </Button>
           </div>
+        </div>
+        {items.length === 0 ? (
+          <Empty description={`暂无${config?.label}`} style={{ marginTop: 24 }} />
+        ) : (
           <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-            {categories.map((category) => (
-              <Col key={category.id} xs={24} sm={12} md={8} lg={6}>
+            {items.map((item) => (
+              <Col key={item.id} xs={24} sm={12} md={8} lg={6}>
                 <Card
                   className={styles.itemCard}
                   actions={[
@@ -170,12 +287,12 @@ const Categories: React.FC = () => {
                       key="edit"
                       type="text"
                       icon={<EditOutlined />}
-                      onClick={() => handleOpenCategoryDialog(category)}
+                      onClick={() => handleOpenDialog(type, item)}
                     />,
                     <Popconfirm
                       key="delete"
-                      title="确定要删除这个分类吗？"
-                      onConfirm={() => handleDeleteCategory(category.id)}
+                      title="确定要删除吗？"
+                      onConfirm={() => handleDelete(item.id)}
                       okText="确定"
                       cancelText="取消"
                     >
@@ -186,125 +303,280 @@ const Categories: React.FC = () => {
                   <div className={styles.itemContent}>
                     <div
                       className={styles.colorDot}
-                      style={{ backgroundColor: category.color }}
+                      style={{ backgroundColor: item.color }}
                     />
-                    <span className={styles.itemName}>{category.name}</span>
+                    <span className={styles.itemName}>{item.name}</span>
                   </div>
                 </Card>
               </Col>
             ))}
           </Row>
+        )}
+      </div>
+    )
+  }
+
+  const menuItems = dictionaryTypes.map((config) => {
+    const count = getDictionariesByType(config.key).length
+    return {
+      key: config.key,
+      icon: <TagOutlined />,
+      label: (
+        <div className={styles.menuItemLabel}>
+          <span>{config.label}</span>
+          <Badge count={count} size="small" />
         </div>
       ),
-    },
-    {
-      key: 'tags',
-      label: `标签 (${tags.length})`,
-      children: (
-        <div>
-          <div className={styles.sectionHeader}>
-            <span className={styles.sectionTitle}>标签列表</span>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => handleOpenTagDialog()}
-            >
-              新建标签
-            </Button>
-          </div>
-          <div className={styles.tagList}>
-            {tags.map((tag) => (
-              <Tag
-                key={tag.id}
-                color={tag.color}
-                closable
-                onClose={(e) => {
-                  e.preventDefault()
-                  handleDeleteTag(tag.id)
-                }}
-                style={{ margin: 4 }}
-              >
-                {tag.name}
-              </Tag>
-            ))}
-          </div>
+    }
+  })
+
+  const renderDictionaryForm = () => (
+    <Form form={form} layout="vertical" preserve={false}>
+      <Form.Item
+        name="name"
+        label="名称"
+        rules={[{ required: true, message: '请输入名称' }]}
+      >
+        <Input placeholder="请输入名称" />
+      </Form.Item>
+      <Form.Item name="color" label="颜色" initialValue={predefinedColors[0]}>
+        <div className={styles.colorPicker}>
+          {predefinedColors.map((color) => (
+            <div
+              key={color}
+              className={`${styles.colorOption} ${form.getFieldValue('color') === color ? styles.colorSelected : ''
+                }`}
+              style={{ backgroundColor: color }}
+              onClick={() => form.setFieldsValue({ color })}
+            />
+          ))}
         </div>
-      ),
-    },
-  ]
+      </Form.Item>
+    </Form>
+  )
+
+  const renderTypeForm = () => (
+    <Form form={typeForm} layout="vertical" preserve={false}>
+      <Form.Item
+        name="key"
+        label="类型标识"
+        rules={[
+          { required: true, message: '请输入类型标识' },
+          { pattern: /^[a-z_]+$/, message: '只能使用小写字母和下划线' },
+        ]}
+      >
+        <Input placeholder="如：my_category" disabled={!!editingType} />
+      </Form.Item>
+      <Form.Item
+        name="label"
+        label="类型名称"
+        rules={[{ required: true, message: '请输入类型名称' }]}
+      >
+        <Input placeholder="如：我的分类" />
+      </Form.Item>
+      <Form.Item name="description" label="描述">
+        <Input placeholder="类型描述（可选）" />
+      </Form.Item>
+    </Form>
+  )
+
+  if (isMobile) {
+    return (
+      <div className={styles.container}>
+        <Spin spinning={isLoading}>
+          <Card className={styles.mobileCard}>
+            <div className={styles.mobileHeader}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Input
+                  placeholder="搜索字典项"
+                  prefix={<SearchOutlined />}
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  allowClear
+                  className={styles.searchInput}
+                  style={{ flex: 1, marginRight: 8 }}
+                />
+                <Button
+                  type="primary"
+                  icon={<AppstoreAddOutlined />}
+                  onClick={() => handleOpenTypeDialog()}
+                >
+                  新类型
+                </Button>
+              </div>
+              <div className={styles.mobileTypeSelector}>
+                {dictionaryTypes.map((config) => (
+                  <Button
+                    key={config.key}
+                    type={currentType === config.key ? 'primary' : 'default'}
+                    size="small"
+                    onClick={() => setCurrentType(config.key)}
+                  >
+                    {config.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <Divider style={{ margin: '12px 0' }} />
+
+            {currentType && renderTypeContent(currentType)}
+          </Card>
+        </Spin>
+
+        <Modal
+          title={editingItem ? '编辑字典项' : '新建字典项'}
+          open={dialogOpen}
+          onCancel={handleCloseDialog}
+          onOk={handleSubmit}
+          destroyOnClose
+          afterOpenChange={(open) => {
+            if (open && editingItem) {
+              form.setFieldsValue({
+                name: editingItem.name,
+                color: editingItem.color,
+                icon: editingItem.icon || '',
+              })
+            }
+          }}
+        >
+          {renderDictionaryForm()}
+        </Modal>
+
+        <Modal
+          title={editingType ? '编辑字典类型' : '新建字典类型'}
+          open={typeDialogOpen}
+          onCancel={handleCloseTypeDialog}
+          onOk={handleSubmitType}
+          destroyOnClose
+          afterOpenChange={(open) => {
+            if (open && editingType) {
+              typeForm.setFieldsValue({
+                key: editingType.key,
+                label: editingType.label,
+                description: editingType.description || '',
+              })
+            }
+          }}
+        >
+          {renderTypeForm()}
+        </Modal>
+      </div>
+    )
+  }
 
   return (
     <div className={styles.container}>
-      <Card>
-        <Tabs items={categoryItems} />
-      </Card>
+      <Spin spinning={isLoading}>
+        <div className={styles.layoutWrapper}>
+          <Card className={styles.sideMenu}>
+            <div className={styles.sideMenuHeader}>
+              <Typography.Title level={5} style={{ margin: 0 }}>
+                字典分类
+              </Typography.Title>
+              <Tooltip title="添加新类型">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<AppstoreAddOutlined />}
+                  onClick={() => handleOpenTypeDialog()}
+                />
+              </Tooltip>
+            </div>
+            <Menu
+              mode="inline"
+              selectedKeys={[currentType]}
+              items={menuItems}
+              onClick={({ key }) => setCurrentType(key)}
+              className={styles.sideMenuList}
+            />
+          </Card>
+
+          <Card className={styles.mainContent}>
+            <div className={styles.contentHeader}>
+              <Input
+                placeholder="搜索字典项"
+                prefix={<SearchOutlined />}
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                allowClear
+                style={{ width: 200 }}
+              />
+              {currentType && (
+                <Dropdown
+                  menu={{
+                    items: [
+                      {
+                        key: 'edit',
+                        icon: <EditOutlined />,
+                        label: '编辑类型',
+                        onClick: () => {
+                          const type = dictionaryTypes.find((t) => t.key === currentType)
+                          if (type) handleOpenTypeDialog(type)
+                        },
+                      },
+                      {
+                        key: 'delete',
+                        icon: <DeleteOutlined />,
+                        label: '删除类型',
+                        danger: true,
+                        onClick: () => {
+                          Modal.confirm({
+                            title: '确认删除',
+                            content: '确定要删除该字典类型吗？删除后无法恢复。',
+                            onOk: () => handleDeleteType(currentType),
+                          })
+                        },
+                      },
+                    ],
+                  }}
+                >
+                  <Button icon={<MoreOutlined />} style={{ marginLeft: 8 }} />
+                </Dropdown>
+              )}
+            </div>
+            <Divider style={{ margin: '12px 0' }} />
+            {currentType && renderTypeContent(currentType)}
+          </Card>
+        </div>
+      </Spin>
 
       <Modal
-        title={editingCategory ? '编辑分类' : '新建分类'}
-        open={categoryDialogOpen}
-        onCancel={handleCloseCategoryDialog}
-        onOk={handleSubmitCategory}
-        destroyOnHidden
+        title={editingItem ? '编辑字典项' : '新建字典项'}
+        open={dialogOpen}
+        onCancel={handleCloseDialog}
+        onOk={handleSubmit}
+        destroyOnClose
+        afterOpenChange={(open) => {
+          if (open && editingItem) {
+            form.setFieldsValue({
+              name: editingItem.name,
+              color: editingItem.color,
+              icon: editingItem.icon || '',
+            })
+          }
+        }}
       >
-        <Form form={categoryForm} layout="vertical" preserve={false}>
-          <Form.Item
-            name="name"
-            label="分类名称"
-            rules={[{ required: true, message: '请输入分类名称' }]}
-          >
-            <Input placeholder="请输入分类名称" />
-          </Form.Item>
-          <Form.Item name="color" label="颜色" initialValue={predefinedColors[0]}>
-            <div className={styles.colorPicker}>
-              {predefinedColors.map((color) => (
-                <div
-                  key={color}
-                  className={`${styles.colorOption} ${
-                    categoryForm.getFieldValue('color') === color
-                      ? styles.colorSelected
-                      : ''
-                  }`}
-                  style={{ backgroundColor: color }}
-                  onClick={() => categoryForm.setFieldsValue({ color })}
-                />
-              ))}
-            </div>
-          </Form.Item>
-        </Form>
+        {renderDictionaryForm()}
       </Modal>
 
       <Modal
-        title={editingTag ? '编辑标签' : '新建标签'}
-        open={tagDialogOpen}
-        onCancel={handleCloseTagDialog}
-        onOk={handleSubmitTag}
-        destroyOnHidden
+        title={editingType ? '编辑字典类型' : '新建字典类型'}
+        open={typeDialogOpen}
+        onCancel={handleCloseTypeDialog}
+        onOk={handleSubmitType}
+        destroyOnClose
+        afterOpenChange={(open) => {
+          if (open && editingType) {
+            typeForm.setFieldsValue({
+              key: editingType.key,
+              label: editingType.label,
+              description: editingType.description || '',
+            })
+          }
+        }}
       >
-        <Form form={tagForm} layout="vertical" preserve={false}>
-          <Form.Item
-            name="name"
-            label="标签名称"
-            rules={[{ required: true, message: '请输入标签名称' }]}
-          >
-            <Input placeholder="请输入标签名称" />
-          </Form.Item>
-          <Form.Item name="color" label="颜色" initialValue={predefinedColors[0]}>
-            <div className={styles.colorPicker}>
-              {predefinedColors.map((color) => (
-                <div
-                  key={color}
-                  className={`${styles.colorOption} ${
-                    tagForm.getFieldValue('color') === color
-                      ? styles.colorSelected
-                      : ''
-                  }`}
-                  style={{ backgroundColor: color }}
-                  onClick={() => tagForm.setFieldsValue({ color })}
-                />
-              ))}
-            </div>
-          </Form.Item>
-        </Form>
+        {renderTypeForm()}
       </Modal>
     </div>
   )

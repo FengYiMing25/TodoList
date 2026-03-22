@@ -10,11 +10,11 @@ import path from "path";
 import { initDatabase } from "./database";
 import authRoutes from "./routes/auth";
 import todoRoutes from "./routes/todos";
-import categoryRoutes from "./routes/categories";
-import tagRoutes from "./routes/tags";
 import uploadRoutes from "./routes/upload";
 import accountRoutes from "./routes/accounts";
 import wardrobeRoutes from "./routes/wardrobe";
+import dictionaryRoutes from "./routes/dictionaries";
+import dictionaryTypeRoutes from "./routes/dictionaryTypes";
 
 dotenv.config();
 
@@ -76,11 +76,11 @@ const startServer = async () => {
 
     await fastify.register(authRoutes, { prefix: "/api/auth" });
     await fastify.register(todoRoutes, { prefix: "/api/todos" });
-    await fastify.register(categoryRoutes, { prefix: "/api/categories" });
-    await fastify.register(tagRoutes, { prefix: "/api/tags" });
     await fastify.register(uploadRoutes, { prefix: "/api/upload" });
     await fastify.register(accountRoutes, { prefix: "/api/accounts" });
     await fastify.register(wardrobeRoutes, { prefix: "/api/wardrobe" });
+    await fastify.register(dictionaryRoutes, { prefix: "/api/dictionaries" });
+    await fastify.register(dictionaryTypeRoutes, { prefix: "/api/dictionary-types" });
 
     fastify.setErrorHandler((error, request, reply) => {
       fastify.log.error(error);

@@ -1,14 +1,7 @@
 import { create } from "zustand";
-import type {
-  WardrobeItem,
-  WardrobeStatistics,
-  CreateWardrobeRequest,
-  UpdateWardrobeRequest,
-  DiscardWardrobeRequest,
-  WardrobeQueryParams,
-  WardrobeCategory,
-} from "@types";
+import type { WardrobeItem, WardrobeStatistics, CreateWardrobeRequest, UpdateWardrobeRequest, DiscardWardrobeRequest, WardrobeQueryParams, WardrobeCategory } from "@types";
 import { wardrobeApi } from "@services/wardrobe";
+import { dedupeRequest, createDedupeKey } from "@utils/requestDedupe";
 
 interface WardrobeState {
   items: WardrobeItem[];
@@ -28,16 +21,6 @@ interface WardrobeState {
   setPage: (page: number) => void;
 }
 
-const WARDROBE_CATEGORIES: WardrobeCategory[] = [
-  "厨具",
-  "衣服",
-  "鞋子",
-  "电子产品",
-  "家具",
-  "书籍",
-  "运动器材",
-  "其他",
-];
 
 export const useWardrobeStore = create<WardrobeState>((set, get) => ({
   items: [],
@@ -49,35 +32,38 @@ export const useWardrobeStore = create<WardrobeState>((set, get) => ({
   filters: {},
 
   fetchItems: async (params?: WardrobeQueryParams) => {
-    set({ isLoading: true });
-    try {
-      const { page, limit, filters } = get();
-      const response = await wardrobeApi.getItems({
-        page: params?.page ?? page,
-        limit: params?.limit ?? limit,
-        ...filters,
-        ...params,
-      });
-      set({
-        items: response.items,
-        total: response.total,
-        page: response.page,
-        limit: response.limit,
-        isLoading: false,
-      });
-    } catch (error) {
-      set({ isLoading: false });
-      throw error;
-    }
+    const { page, limit, filters } = get();
+    const queryParams = {
+      page: params?.page ?? page,
+      limit: params?.limit ?? limit,
+      ...filters,
+      ...params,
+    };
+    const key = createDedupeKey("wardrobe", queryParams.page, queryParams.limit, queryParams.category, queryParams.status);
+    return dedupeRequest(key, async () => {
+      set({ isLoading: true });
+      try {
+        const response = await wardrobeApi.getItems(queryParams);
+        set({
+          items: response.items,
+          total: response.total,
+          page: response.page,
+          limit: response.limit,
+          isLoading: false,
+        });
+      } catch (error) {
+        set({ isLoading: false });
+        throw error;
+      }
+    });
   },
 
   fetchStatistics: async () => {
-    try {
+    const key = createDedupeKey("wardrobe-stats");
+    return dedupeRequest(key, async () => {
       const statistics = await wardrobeApi.getStatistics();
       set({ statistics });
-    } catch (error) {
-      console.error("Failed to fetch statistics:", error);
-    }
+    });
   },
 
   createItem: async (data: CreateWardrobeRequest) => {
@@ -121,4 +107,4 @@ export const useWardrobeStore = create<WardrobeState>((set, get) => ({
   },
 }));
 
-export { WARDROBE_CATEGORIES };
+

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { User, AuthResponse } from "@types";
 import { authApi } from "@services/auth";
+import { dedupeRequest } from "@utils/requestDedupe";
 
 interface AuthState {
   user: User | null;
@@ -80,24 +81,26 @@ export const useAuthStore = create<AuthState>()(
 
         if (isInitialized) return;
 
-        set({ isLoading: true });
-        try {
-          const user = await authApi.getProfile();
-          set({ 
-            user, 
-            isAuthenticated: true, 
-            isLoading: false, 
-            isInitialized: true 
-          });
-        } catch {
-          set({ 
-            user: null, 
-            token: null, 
-            isAuthenticated: false, 
-            isLoading: false,
-            isInitialized: true,
-          });
-        }
+        return dedupeRequest('checkAuth', async () => {
+          set({ isLoading: true });
+          try {
+            const user = await authApi.getProfile();
+            set({ 
+              user, 
+              isAuthenticated: true, 
+              isLoading: false, 
+              isInitialized: true 
+            });
+          } catch {
+            set({ 
+              user: null, 
+              token: null, 
+              isAuthenticated: false, 
+              isLoading: false,
+              isInitialized: true,
+            });
+          }
+        })
       },
 
       updateProfile: async (data: Partial<User>) => {

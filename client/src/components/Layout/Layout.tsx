@@ -128,11 +128,7 @@ const Layout: React.FC = () => {
             </Space>
           </Dropdown>,
         ]}
-        avatarProps={{
-          src: user?.avatar,
-          title: user?.username?.charAt(0).toUpperCase(),
-          size: 'small',
-        }}
+
         menuFooterRender={(props) => {
           if (props?.collapsed) return undefined
           return (

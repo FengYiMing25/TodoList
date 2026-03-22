@@ -71,3 +71,141 @@
   object-fit: cover;
   border-radius: 4px;
 }
+
+.mobileList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mobileCard {
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  :global {
+    .ant-card-body {
+      padding: 12px;
+    }
+  }
+}
+
+.mobileCardHeader {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.mobileCardImage {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.mobileCardNoImage {
+  width: 60px;
+  height: 60px;
+  background: var(--ant-color-bg-layout);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.mobileCardInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobileCardTitle {
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobileCardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.mobileCardPrice {
+  font-size: 14px;
+  color: var(--ant-color-text-secondary);
+}
+
+.mobileCardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid var(--ant-color-border-secondary);
+}
+
+.mobileCardDate {
+  font-size: 12px;
+  color: var(--ant-color-text-secondary);
+}
+
+.mobileCardActions {
+  display: flex;
+  gap: 4px;
+}
+
+.summaryRow {
+  margin-bottom: 12px;
+
+  :global {
+    .ant-col {
+      padding: 0 4px !important;
+    }
+
+    .ant-card-body {
+      padding: 12px !important;
+    }
+  }
+}
+
+.mobileHeader {
+  margin-bottom: 12px;
+}
+
+.mobileHeaderTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.mobileTitle {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.mobileCount {
+  font-size: 12px;
+  color: var(--ant-color-text-secondary);
+}
+
+.filterRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+
+  > * {
+    flex: 1;
+  }
+}

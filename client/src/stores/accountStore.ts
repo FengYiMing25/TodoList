@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { Account, AccountQueryParams, CreateAccountRequest, UpdateAccountRequest, AccountSummary, AccountStatistics } from "@types";
 import { accountApi } from "@services/account";
+import { dedupeRequest, createDedupeKey } from "@utils/requestDedupe";
 
 interface AccountState {
   accounts: Account[];
@@ -35,21 +36,24 @@ export const useAccountStore = create<AccountState>((set, get) => ({
   },
 
   fetchAccounts: async (params?: AccountQueryParams) => {
-    set({ isLoading: true });
-    try {
-      const queryParams = { ...get().queryParams, ...params };
-      const response = await accountApi.getAccounts(queryParams);
-      set({
-        accounts: response.items,
-        total: response.total,
-        summary: response.summary,
-        queryParams,
-        isLoading: false,
-      });
-    } catch (error) {
-      set({ isLoading: false });
-      throw error;
-    }
+    const queryParams = { ...get().queryParams, ...params };
+    const key = createDedupeKey('accounts', queryParams.page, queryParams.limit, queryParams.type, queryParams.category)
+    return dedupeRequest(key, async () => {
+      set({ isLoading: true });
+      try {
+        const response = await accountApi.getAccounts(queryParams);
+        set({
+          accounts: response.items,
+          total: response.total,
+          summary: response.summary,
+          queryParams,
+          isLoading: false,
+        });
+      } catch (error) {
+        set({ isLoading: false });
+        throw error;
+      }
+    })
   },
 
   fetchAccountById: async (id: string) => {
@@ -87,12 +91,11 @@ export const useAccountStore = create<AccountState>((set, get) => ({
   },
 
   fetchStatistics: async (params?: { startDate?: string; endDate?: string }) => {
-    try {
+    const key = createDedupeKey('account-stats', params?.startDate, params?.endDate)
+    return dedupeRequest(key, async () => {
       const statistics = await accountApi.getStatistics(params);
       set({ statistics });
-    } catch (error) {
-      throw error;
-    }
+    })
   },
 
   setQueryParams: (params: Partial<AccountQueryParams>) => {

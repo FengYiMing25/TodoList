@@ -62,9 +62,8 @@ const Settings: React.FC = () => {
     selectFile,
     setImageUrl,
     uploadPendingFile,
-    reset: resetImageUpload,
   } = useImageUpload({
-    onSuccess: (url) => {
+    onSuccess: (url: string) => {
       updateProfile({ avatar: url })
       message.success('头像更新成功')
     },

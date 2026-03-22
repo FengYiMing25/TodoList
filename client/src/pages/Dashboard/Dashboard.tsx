@@ -14,7 +14,7 @@ import {
 } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
 import { useTodoStore } from '@stores/todoStore'
-import { useCategoryStore } from '@stores/categoryStore'
+import { useDictionaryStore } from '@stores/dictionaryStore'
 import { useAccountStore } from '@stores/accountStore'
 import { useWardrobeStore } from '@stores/wardrobeStore'
 import styles from './Dashboard.module.less'
@@ -24,17 +24,18 @@ const { Text, Title } = Typography
 const Dashboard: React.FC = () => {
   const { token } = theme.useToken()
   const { todos, fetchTodos } = useTodoStore()
-  const { categories, fetchCategories } = useCategoryStore()
+  const { fetchDictionaries } = useDictionaryStore()
   const { summary, statistics, fetchAccounts, fetchStatistics } = useAccountStore()
   const { statistics: wardrobeStats, fetchStatistics: fetchWardrobeStats } = useWardrobeStore()
 
   useEffect(() => {
     fetchTodos()
-    fetchCategories()
+    fetchDictionaries('todo_category')
+    fetchDictionaries('todo_tag')
     fetchAccounts({ limit: 100 })
     fetchStatistics()
     fetchWardrobeStats()
-  }, [fetchTodos, fetchCategories, fetchAccounts, fetchStatistics, fetchWardrobeStats])
+  }, [fetchTodos, fetchDictionaries, fetchAccounts, fetchStatistics, fetchWardrobeStats])
 
   const completedCount = todos.filter((t) => t.status === 'completed').length
   const pendingCount = todos.filter((t) => t.status === 'pending').length
@@ -74,12 +75,27 @@ const Dashboard: React.FC = () => {
   }), [completedCount, inProgressCount, pendingCount, token])
 
   const expenseChartOption = useMemo(() => {
-    const monthlyData = statistics?.monthlyData || []
+    const monthlyData = statistics?.byMonth || []
+    const incomeByMonth: Record<string, number> = {}
+    const expenseByMonth: Record<string, number> = {}
+    const months: string[] = []
+
+    monthlyData.forEach((d) => {
+      if (!months.includes(d.month)) {
+        months.push(d.month)
+      }
+      if (d.type === 'income') {
+        incomeByMonth[d.month] = d.total
+      } else {
+        expenseByMonth[d.month] = d.total
+      }
+    })
+
     return {
       tooltip: { trigger: 'axis', textStyle: { fontSize: 11 } },
       legend: { data: ['收入', '支出'], bottom: '0%', itemWidth: 10, itemHeight: 10, textStyle: { fontSize: 11 } },
       grid: { left: '3%', right: '3%', bottom: '18%', top: '8%', containLabel: true },
-      xAxis: { type: 'category', boundaryGap: false, data: monthlyData.map(d => d.month), axisLabel: { fontSize: 10 } },
+      xAxis: { type: 'category', boundaryGap: false, data: months, axisLabel: { fontSize: 10 } },
       yAxis: { type: 'value', axisLabel: { fontSize: 10 } },
       series: [
         {
@@ -88,7 +104,7 @@ const Dashboard: React.FC = () => {
           smooth: true,
           symbol: 'circle',
           symbolSize: 6,
-          data: monthlyData.map(d => d.income),
+          data: months.map((m) => incomeByMonth[m] || 0),
           itemStyle: { color: token.colorSuccess },
           areaStyle: { color: `${token.colorSuccess}20` },
         },
@@ -98,7 +114,7 @@ const Dashboard: React.FC = () => {
           smooth: true,
           symbol: 'circle',
           symbolSize: 6,
-          data: monthlyData.map(d => d.expense),
+          data: months.map((m) => expenseByMonth[m] || 0),
           itemStyle: { color: token.colorError },
           areaStyle: { color: `${token.colorError}20` },
         },

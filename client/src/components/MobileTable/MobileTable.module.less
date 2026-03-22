@@ -2,19 +2,48 @@
   min-height: 100%;
 }
 
-.actionBar {
-  display: flex;
-  gap: 4px;
-  flex-wrap: nowrap;
+.header {
+  margin-bottom: 12px;
 }
 
-.mobileList {
+.headerTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.count {
+  font-size: 12px;
+  color: var(--ant-color-text-secondary);
+}
+
+.searchBar {
+  margin-bottom: 12px;
+}
+
+.filterRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+
+  > * {
+    flex: 1;
+  }
+}
+
+.list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
-.mobileCard {
+.card {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s;
@@ -30,14 +59,14 @@
   }
 }
 
-.mobileCardHeader {
+.cardHeader {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   margin-bottom: 8px;
 }
 
-.mobileCardTitle {
+.cardTitle {
   flex: 1;
   font-size: 15px;
   font-weight: 500;
@@ -47,14 +76,14 @@
   margin-right: 8px;
 }
 
-.mobileCardMeta {
+.cardMeta {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 8px;
 }
 
-.mobileCardFooter {
+.cardFooter {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -62,49 +91,19 @@
   border-top: 1px solid var(--ant-color-border-secondary);
 }
 
-.mobileCardDate {
+.cardDate {
   font-size: 12px;
   color: var(--ant-color-text-secondary);
 }
 
-.mobileCardActions {
+.cardActions {
   display: flex;
   gap: 4px;
 }
 
-.searchBar {
-  margin-bottom: 12px;
-}
-
-.filterRow {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-
-  > * {
-    flex: 1;
-    min-width: 80px;
-  }
-}
-
-.mobileHeader {
-  margin-bottom: 12px;
-}
-
-.mobileHeaderTop {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.mobileTitle {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.mobileCount {
-  font-size: 12px;
-  color: var(--ant-color-text-secondary);
+.fab {
+  position: fixed;
+  right: 16px;
+  bottom: 80px;
+  z-index: 100;
 }

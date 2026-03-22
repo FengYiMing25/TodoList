@@ -1,4 +1,4 @@
-import type { Category, Tag } from "./category";
+import type { Dictionary } from "./dictionary";
 import type { Attachment } from "./attachment";
 
 export type Priority = "low" | "medium" | "high";
@@ -12,8 +12,8 @@ export interface Todo {
   priority: Priority;
   dueDate?: string;
   categoryId?: string;
-  category?: Category;
-  tags: Tag[];
+  category?: Pick<Dictionary, 'id' | 'name' | 'color'>;
+  tags: Pick<Dictionary, 'id' | 'name' | 'color'>[];
   attachments?: Attachment[];
   userId: string;
   createdAt: string;

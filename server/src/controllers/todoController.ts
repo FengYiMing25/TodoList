@@ -6,8 +6,6 @@ import type {
   CreateTodoRequest,
   UpdateTodoRequest,
   TodoQueryParams,
-  Category,
-  Tag,
   Attachment,
 } from "@shared/types";
 
@@ -26,7 +24,7 @@ interface TodoRow {
   category_color?: string;
 }
 
-interface TagRow {
+interface DictionaryRow {
   id: string;
   name: string;
   color: string;
@@ -45,7 +43,7 @@ interface AttachmentRow {
 
 const formatTodo = (
   todo: TodoRow,
-  tags: Tag[] = [],
+  tags: DictionaryRow[] = [],
   attachments: Attachment[] = []
 ): Todo => ({
   id: todo.id,
@@ -62,7 +60,7 @@ const formatTodo = (
         color: todo.category_color!,
       }
     : undefined,
-  tags,
+  tags: tags.map(t => ({ id: t.id, name: t.name, color: t.color })),
   attachments,
   userId: todo.user_id,
   createdAt: todo.created_at,
@@ -94,7 +92,7 @@ export const getTodos = async (
   };
   const dbSortBy = sortByMap[sortBy] || "created_at";
 
-  let sql = `SELECT t.*, c.id as category_id, c.name as category_name, c.color as category_color FROM todos t LEFT JOIN categories c ON t.category_id = c.id WHERE t.user_id = ?`;
+  let sql = `SELECT t.*, d.id as category_id, d.name as category_name, d.color as category_color FROM todos t LEFT JOIN dictionaries d ON t.category_id = d.id AND d.type = 'todo_category' WHERE t.user_id = ?`;
   const params: unknown[] = [request.userId];
 
   if (status) {
@@ -115,7 +113,7 @@ export const getTodos = async (
   }
 
   const countSql = sql.replace(
-    "SELECT t.*, c.id as category_id, c.name as category_name, c.color as category_color",
+    "SELECT t.*, d.id as category_id, d.name as category_name, d.color as category_color",
     "SELECT COUNT(*) as total"
   );
   const countResult = db.get<{ total: number }>(countSql, params);
@@ -127,8 +125,8 @@ export const getTodos = async (
   const todos = db.all<TodoRow>(sql, params);
 
   const todosWithDetails = todos.map((todo) => {
-    const tags = db.all<Tag>(
-      `SELECT t.id, t.name, t.color FROM tags t INNER JOIN todo_tags tt ON t.id = tt.tag_id WHERE tt.todo_id = ?`,
+    const tags = db.all<DictionaryRow>(
+      `SELECT d.id, d.name, d.color FROM dictionaries d INNER JOIN todo_tags tt ON d.id = tt.tag_id WHERE tt.todo_id = ? AND d.type = 'todo_tag'`,
       [todo.id]
     );
     const attachments = db.all<AttachmentRow>(
@@ -170,7 +168,7 @@ export const getTodoById = async (
   const { id } = request.params;
 
   const todo = db.get<TodoRow>(
-    `SELECT t.*, c.id as category_id, c.name as category_name, c.color as category_color FROM todos t LEFT JOIN categories c ON t.category_id = c.id WHERE t.id = ? AND t.user_id = ?`,
+    `SELECT t.*, d.id as category_id, d.name as category_name, d.color as category_color FROM todos t LEFT JOIN dictionaries d ON t.category_id = d.id AND d.type = 'todo_category' WHERE t.id = ? AND t.user_id = ?`,
     [id, request.userId]
   );
 
@@ -178,8 +176,8 @@ export const getTodoById = async (
     return reply.code(404).send({ success: false, message: "待办事项不存在" });
   }
 
-  const tags = db.all<Tag>(
-    `SELECT t.id, t.name, t.color FROM tags t INNER JOIN todo_tags tt ON t.id = tt.tag_id WHERE tt.todo_id = ?`,
+  const tags = db.all<DictionaryRow>(
+    `SELECT d.id, d.name, d.color FROM dictionaries d INNER JOIN todo_tags tt ON d.id = tt.tag_id WHERE tt.todo_id = ? AND d.type = 'todo_tag'`,
     [todo.id]
   );
   const attachments = db.all<AttachmentRow>(
@@ -265,9 +263,12 @@ export const updateTodo = async (
     }
   }
 
-  const todo = db.get<TodoRow>("SELECT * FROM todos WHERE id = ?", [id]);
-  const tags = db.all<Tag>(
-    `SELECT t.id, t.name, t.color FROM tags t INNER JOIN todo_tags tt ON t.id = tt.tag_id WHERE tt.todo_id = ?`,
+  const todo = db.get<TodoRow>(
+    `SELECT t.*, d.id as category_id, d.name as category_name, d.color as category_color FROM todos t LEFT JOIN dictionaries d ON t.category_id = d.id AND d.type = 'todo_category' WHERE t.id = ?`,
+    [id]
+  );
+  const tags = db.all<DictionaryRow>(
+    `SELECT d.id, d.name, d.color FROM dictionaries d INNER JOIN todo_tags tt ON d.id = tt.tag_id WHERE tt.todo_id = ? AND d.type = 'todo_tag'`,
     [id]
   );
   const attachments = db.all<AttachmentRow>(
@@ -336,9 +337,12 @@ export const toggleTodoStatus = async (
     id,
   ]);
 
-  const updatedTodo = db.get<TodoRow>("SELECT * FROM todos WHERE id = ?", [id]);
-  const tags = db.all<Tag>(
-    `SELECT t.id, t.name, t.color FROM tags t INNER JOIN todo_tags tt ON t.id = tt.tag_id WHERE tt.todo_id = ?`,
+  const updatedTodo = db.get<TodoRow>(
+    `SELECT t.*, d.id as category_id, d.name as category_name, d.color as category_color FROM todos t LEFT JOIN dictionaries d ON t.category_id = d.id AND d.type = 'todo_category' WHERE t.id = ?`,
+    [id]
+  );
+  const tags = db.all<DictionaryRow>(
+    `SELECT d.id, d.name, d.color FROM dictionaries d INNER JOIN todo_tags tt ON d.id = tt.tag_id WHERE tt.todo_id = ? AND d.type = 'todo_tag'`,
     [id]
   );
   const attachments = db.all<AttachmentRow>(

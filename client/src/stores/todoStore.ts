@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { Todo, TodoQueryParams, CreateTodoRequest, UpdateTodoRequest } from "@types";
 import { todoApi } from "@services/todo";
+import { dedupeRequest, createDedupeKey } from "@utils/requestDedupe";
 
 interface TodoState {
   todos: Todo[];
@@ -31,20 +32,23 @@ export const useTodoStore = create<TodoState>((set, get) => ({
   },
 
   fetchTodos: async (params?: TodoQueryParams) => {
-    set({ isLoading: true });
-    try {
-      const queryParams = { ...get().queryParams, ...params };
-      const response = await todoApi.getTodos(queryParams);
-      set({
-        todos: response.items,
-        total: response.total,
-        queryParams,
-        isLoading: false,
-      });
-    } catch (error) {
-      set({ isLoading: false });
-      throw error;
-    }
+    const queryParams = { ...get().queryParams, ...params };
+    const key = createDedupeKey('todos', queryParams.page, queryParams.limit, queryParams.status, queryParams.priority)
+    return dedupeRequest(key, async () => {
+      set({ isLoading: true });
+      try {
+        const response = await todoApi.getTodos(queryParams);
+        set({
+          todos: response.items,
+          total: response.total,
+          queryParams,
+          isLoading: false,
+        });
+      } catch (error) {
+        set({ isLoading: false });
+        throw error;
+      }
+    })
   },
 
   fetchTodoById: async (id: string) => {

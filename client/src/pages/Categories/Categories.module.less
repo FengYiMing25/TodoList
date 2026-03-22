@@ -2,10 +2,63 @@
   min-height: 100%;
 }
 
+.layoutWrapper {
+  display: flex;
+  gap: 16px;
+  min-height: calc(100vh - 120px);
+}
+
+.sideMenu {
+  width: 240px;
+  flex-shrink: 0;
+  height: fit-content;
+}
+
+.sideMenuHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+}
+
+.sideMenuList {
+  border-inline-end: none !important;
+}
+
+.menuItemLabel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding-right: 8px;
+}
+
+.helpSection {
+  padding: 8px;
+  background: var(--ant-color-bg-layout);
+  border-radius: 6px;
+}
+
+.mainContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.contentHeader {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
 .sectionHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.headerActions {
+  display: flex;
+  gap: 8px;
 }
 
 .sectionTitle {
@@ -67,4 +120,66 @@
 .colorSelected {
   border-color: #1890ff;
   box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.mobileCard {
+  padding: 0;
+}
+
+.mobileHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.searchInput {
+  width: 100%;
+}
+
+.mobileTypeSelector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mobileContainer {
+  padding: 12px 0;
+}
+
+.mobileList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.mobileItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: var(--ant-color-bg-container);
+  border-radius: 8px;
+  border: 1px solid var(--ant-color-border);
+}
+
+.mobileItemContent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mobileItemActions {
+  display: flex;
+  gap: 4px;
+}
+
+@media (max-width: 768px) {
+  .layoutWrapper {
+    flex-direction: column;
+  }
+
+  .sideMenu {
+    width: 100%;
+  }
 }
