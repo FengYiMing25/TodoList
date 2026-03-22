@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { WardrobeItem, WardrobeStatistics, CreateWardrobeRequest, UpdateWardrobeRequest, DiscardWardrobeRequest, WardrobeQueryParams, WardrobeCategory } from "@types";
+import type { WardrobeItem, WardrobeStatistics, CreateWardrobeRequest, UpdateWardrobeRequest, DiscardWardrobeRequest, WardrobeQueryParams } from "@types";
 import { wardrobeApi } from "@services/wardrobe";
 import { dedupeRequest, createDedupeKey } from "@utils/requestDedupe";
 
@@ -20,7 +20,6 @@ interface WardrobeState {
   setFilters: (filters: Partial<WardrobeQueryParams>) => void;
   setPage: (page: number) => void;
 }
-
 
 export const useWardrobeStore = create<WardrobeState>((set, get) => ({
   items: [],
@@ -106,5 +105,3 @@ export const useWardrobeStore = create<WardrobeState>((set, get) => ({
     set({ page });
   },
 }));
-
-
