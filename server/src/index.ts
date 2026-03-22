@@ -56,8 +56,13 @@ const startServer = async () => {
       },
     });
 
+    const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, "../uploads");
+    if (!require("fs").existsSync(uploadDir)) {
+      require("fs").mkdirSync(uploadDir, { recursive: true });
+    }
+
     await fastify.register(staticPlugin, {
-      root: path.join(__dirname, "../uploads"),
+      root: uploadDir,
       prefix: "/uploads/",
     });
 

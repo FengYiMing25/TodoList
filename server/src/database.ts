@@ -4,10 +4,22 @@ import path from "path";
 import { v4 as uuidv4 } from "uuid";
 
 let db: Database;
-const dbPath = path.resolve(__dirname, "../data.db");
+
+const getDataDir = (): string => {
+  return process.env.DATA_DIR || path.resolve(__dirname, "..");
+};
+
+const getDbPath = (): string => {
+  const dataDir = getDataDir();
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+  return path.join(dataDir, "data.db");
+};
 
 export const initDatabase = async (): Promise<void> => {
   const SQL = await initSqlJs();
+  const dbPath = getDbPath();
 
   if (fs.existsSync(dbPath)) {
     const buffer = fs.readFileSync(dbPath);
@@ -188,6 +200,7 @@ export const initDatabase = async (): Promise<void> => {
 export const saveDatabase = (): void => {
   const data = db.export();
   const buffer = Buffer.from(data);
+  const dbPath = getDbPath();
   fs.writeFileSync(dbPath, buffer);
 };
 
