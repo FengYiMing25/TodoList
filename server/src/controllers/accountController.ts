@@ -1,8 +1,15 @@
-import { Response } from "express";
+import { FastifyRequest, FastifyReply } from "fastify";
 import { v4 as uuidv4 } from "uuid";
-import { AuthRequest } from "../types";
 import db from "../database";
-import { asyncHandler } from "../middlewares";
+import type {
+  Account,
+  CreateAccountRequest,
+  UpdateAccountRequest,
+  AccountQueryParams,
+  AccountStatistics,
+  CategoryStatistics,
+  MonthlyStatistics,
+} from "@shared/types";
 
 interface AccountRow {
   id: string;
@@ -16,18 +23,42 @@ interface AccountRow {
   updated_at: string;
 }
 
-export const getAccounts = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { page = 1, limit = 10, type, category, startDate, endDate, sortBy = "date", sortOrder = "desc" } = req.query;
+const formatAccount = (a: AccountRow): Account => ({
+  id: a.id,
+  type: a.type as Account["type"],
+  category: a.category,
+  amount: a.amount,
+  description: a.description || undefined,
+  date: a.date,
+  userId: a.user_id,
+  createdAt: a.created_at,
+  updatedAt: a.updated_at,
+});
+
+export const getAccounts = async (
+  request: FastifyRequest<{ Querystring: AccountQueryParams }>,
+  reply: FastifyReply
+) => {
+  const {
+    page = 1,
+    limit = 10,
+    type,
+    category,
+    startDate,
+    endDate,
+    sortBy = "date",
+    sortOrder = "desc",
+  } = request.query;
 
   const sortByMap: Record<string, string> = {
     date: "date",
     amount: "amount",
     createdAt: "created_at",
   };
-  const dbSortBy = sortByMap[sortBy as string] || "date";
+  const dbSortBy = sortByMap[sortBy] || "date";
 
   let sql = `SELECT * FROM accounts WHERE user_id = ?`;
-  const params: unknown[] = [req.userId];
+  const params: unknown[] = [request.userId];
 
   if (type) {
     sql += " AND type = ?";
@@ -57,24 +88,14 @@ export const getAccounts = asyncHandler(async (req: AuthRequest, res: Response) 
 
   const incomeSql = `SELECT COALESCE(SUM(amount), 0) as total FROM accounts WHERE user_id = ? AND type = 'income'`;
   const expenseSql = `SELECT COALESCE(SUM(amount), 0) as total FROM accounts WHERE user_id = ? AND type = 'expense'`;
-  
-  const incomeTotal = db.get<{ total: number }>(incomeSql, [req.userId]);
-  const expenseTotal = db.get<{ total: number }>(expenseSql, [req.userId]);
 
-  res.json({
+  const incomeTotal = db.get<{ total: number }>(incomeSql, [request.userId]);
+  const expenseTotal = db.get<{ total: number }>(expenseSql, [request.userId]);
+
+  return reply.send({
     success: true,
     data: {
-      items: accounts.map((a) => ({
-        id: a.id,
-        type: a.type,
-        category: a.category,
-        amount: a.amount,
-        description: a.description,
-        date: a.date,
-        userId: a.user_id,
-        createdAt: a.created_at,
-        updatedAt: a.updated_at,
-      })),
+      items: accounts.map(formatAccount),
       total,
       page: Number(page),
       limit: Number(limit),
@@ -86,136 +107,119 @@ export const getAccounts = asyncHandler(async (req: AuthRequest, res: Response) 
       },
     },
   });
-});
+};
 
-export const getAccountById = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { id } = req.params;
+export const getAccountById = async (
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) => {
+  const { id } = request.params;
 
-  const account = db.get<AccountRow>(`SELECT * FROM accounts WHERE id = ? AND user_id = ?`, [id, req.userId]);
+  const account = db.get<AccountRow>(
+    `SELECT * FROM accounts WHERE id = ? AND user_id = ?`,
+    [id, request.userId]
+  );
 
   if (!account) {
-    res.status(404).json({ success: false, message: "记账记录不存在" });
-    return;
+    return reply.code(404).send({ success: false, message: "记账记录不存在" });
   }
 
-  res.json({
+  return reply.send({
     success: true,
-    data: {
-      id: account.id,
-      type: account.type,
-      category: account.category,
-      amount: account.amount,
-      description: account.description,
-      date: account.date,
-      userId: account.user_id,
-      createdAt: account.created_at,
-      updatedAt: account.updated_at,
-    },
+    data: formatAccount(account),
   });
-});
+};
 
-export const createAccount = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { type, category, amount, description, date } = req.body;
+export const createAccount = async (
+  request: FastifyRequest<{ Body: CreateAccountRequest }>,
+  reply: FastifyReply
+) => {
+  const { type, category, amount, description, date } = request.body;
 
   if (!type || !category || !amount || !date) {
-    res.status(400).json({ success: false, message: "类型、分类、金额和日期不能为空" });
-    return;
+    return reply.code(400).send({ success: false, message: "类型、分类、金额和日期不能为空" });
   }
 
   if (type !== "income" && type !== "expense") {
-    res.status(400).json({ success: false, message: "类型必须是 income 或 expense" });
-    return;
+    return reply.code(400).send({ success: false, message: "类型必须是 income 或 expense" });
   }
 
   const accountId = uuidv4();
 
-  db.run(`INSERT INTO accounts (id, type, category, amount, description, date, user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`, [
-    accountId,
-    type,
-    category,
-    amount,
-    description,
-    date,
-    req.userId,
-  ]);
+  db.run(
+    `INSERT INTO accounts (id, type, category, amount, description, date, user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+    [accountId, type, category, amount, description, date, request.userId]
+  );
 
   const account = db.get<AccountRow>("SELECT * FROM accounts WHERE id = ?", [accountId]);
 
-  res.status(201).json({
+  return reply.code(201).send({
     success: true,
-    data: {
-      id: account?.id,
-      type: account?.type,
-      category: account?.category,
-      amount: account?.amount,
-      description: account?.description,
-      date: account?.date,
-      userId: account?.user_id,
-      createdAt: account?.created_at,
-      updatedAt: account?.updated_at,
-    },
+    data: formatAccount(account!),
   });
-});
+};
 
-export const updateAccount = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { id } = req.params;
-  const { type, category, amount, description, date } = req.body;
+export const updateAccount = async (
+  request: FastifyRequest<{ Params: { id: string }; Body: UpdateAccountRequest }>,
+  reply: FastifyReply
+) => {
+  const { id } = request.params;
+  const { type, category, amount, description, date } = request.body;
 
-  const existingAccount = db.get<AccountRow>("SELECT * FROM accounts WHERE id = ? AND user_id = ?", [id, req.userId]);
+  const existingAccount = db.get<AccountRow>(
+    "SELECT * FROM accounts WHERE id = ? AND user_id = ?",
+    [id, request.userId]
+  );
 
   if (!existingAccount) {
-    res.status(404).json({ success: false, message: "记账记录不存在" });
-    return;
+    return reply.code(404).send({ success: false, message: "记账记录不存在" });
   }
 
   if (type && type !== "income" && type !== "expense") {
-    res.status(400).json({ success: false, message: "类型必须是 income 或 expense" });
-    return;
+    return reply.code(400).send({ success: false, message: "类型必须是 income 或 expense" });
   }
 
   db.run(
     `UPDATE accounts SET type = COALESCE(?, type), category = COALESCE(?, category), amount = COALESCE(?, amount), description = COALESCE(?, description), date = COALESCE(?, date), updated_at = datetime('now') WHERE id = ?`,
-    [type, category, amount, description, date, id],
+    [type, category, amount, description, date, id]
   );
 
   const account = db.get<AccountRow>("SELECT * FROM accounts WHERE id = ?", [id]);
 
-  res.json({
+  return reply.send({
     success: true,
-    data: {
-      id: account?.id,
-      type: account?.type,
-      category: account?.category,
-      amount: account?.amount,
-      description: account?.description,
-      date: account?.date,
-      userId: account?.user_id,
-      createdAt: account?.created_at,
-      updatedAt: account?.updated_at,
-    },
+    data: formatAccount(account!),
   });
-});
+};
 
-export const deleteAccount = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { id } = req.params;
+export const deleteAccount = async (
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) => {
+  const { id } = request.params;
 
-  const account = db.get<AccountRow>("SELECT * FROM accounts WHERE id = ? AND user_id = ?", [id, req.userId]);
+  const account = db.get<AccountRow>(
+    "SELECT * FROM accounts WHERE id = ? AND user_id = ?",
+    [id, request.userId]
+  );
 
   if (!account) {
-    res.status(404).json({ success: false, message: "记账记录不存在" });
-    return;
+    return reply.code(404).send({ success: false, message: "记账记录不存在" });
   }
 
   db.run("DELETE FROM accounts WHERE id = ?", [id]);
 
-  res.json({ success: true, message: "删除成功" });
-});
+  return reply.send({ success: true, message: "删除成功" });
+};
 
-export const getStatistics = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { startDate, endDate } = req.query;
+export const getStatistics = async (
+  request: FastifyRequest<{ Querystring: { startDate?: string; endDate?: string } }>,
+  reply: FastifyReply
+) => {
+  const { startDate, endDate } = request.query;
 
   let dateFilter = "";
-  const params: unknown[] = [req.userId];
+  const params: unknown[] = [request.userId];
 
   if (startDate && endDate) {
     dateFilter = " AND date BETWEEN ? AND ?";
@@ -230,7 +234,7 @@ export const getStatistics = asyncHandler(async (req: AuthRequest, res: Response
     ORDER BY type, total DESC
   `;
 
-  const categoryStats = db.all<{ type: string; category: string; total: number }>(categorySql, params);
+  const categoryStats = db.all<CategoryStatistics>(categorySql, params);
 
   const monthlySql = `
     SELECT strftime('%Y-%m', date) as month, type, SUM(amount) as total
@@ -240,13 +244,13 @@ export const getStatistics = asyncHandler(async (req: AuthRequest, res: Response
     ORDER BY month DESC
   `;
 
-  const monthlyStats = db.all<{ month: string; type: string; total: number }>(monthlySql, params);
+  const monthlyStats = db.all<MonthlyStatistics>(monthlySql, params);
 
-  res.json({
+  return reply.send({
     success: true,
     data: {
       byCategory: categoryStats,
       byMonth: monthlyStats,
-    },
+    } as AccountStatistics,
   });
-});
+};

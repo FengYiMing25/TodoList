@@ -2,3 +2,22 @@
   padding: 24px;
   min-height: calc(100vh - 64px - 48px);
 }
+
+.pageContainer {
+  :global {
+    .ant-pro-page-container-children-container {
+      padding-block: 8px;
+      padding-inline: 8px;
+
+      @media (min-width: 576px) {
+        padding-block: 12px;
+        padding-inline: 16px;
+      }
+
+      @media (min-width: 992px) {
+        padding-block: 16px;
+        padding-inline: 24px;
+      }
+    }
+  }
+}

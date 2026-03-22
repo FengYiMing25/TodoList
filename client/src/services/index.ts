@@ -4,3 +4,4 @@ export { todoApi } from "./todo";
 export { categoryApi } from "./category";
 export { uploadApi } from "./upload";
 export { accountApi } from "./account";
+export { wardrobeApi } from "./wardrobe";

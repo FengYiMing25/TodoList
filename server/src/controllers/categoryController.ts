@@ -1,8 +1,11 @@
-import { Response } from "express";
+import { FastifyRequest, FastifyReply } from "fastify";
 import { v4 as uuidv4 } from "uuid";
-import { AuthRequest } from "../types";
 import db from "../database";
-import { asyncHandler } from "../middlewares";
+import type {
+  Category,
+  CreateCategoryRequest,
+  UpdateCategoryRequest,
+} from "@shared/types";
 
 interface CategoryRow {
   id: string;
@@ -14,155 +17,101 @@ interface CategoryRow {
   updated_at: string;
 }
 
-interface TagRow {
-  id: string;
-  name: string;
-  color: string;
-  user_id: string;
-  created_at: string;
-}
-
-export const getCategories = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const categories = db.all<CategoryRow>("SELECT * FROM categories WHERE user_id = ? ORDER BY created_at DESC", [req.userId]);
-
-  res.json({
-    success: true,
-    data: categories.map((cat) => ({
-      id: cat.id,
-      name: cat.name,
-      color: cat.color,
-      icon: cat.icon,
-      userId: cat.user_id,
-      createdAt: cat.created_at,
-      updatedAt: cat.updated_at,
-    })),
-  });
+const formatCategory = (cat: CategoryRow): Category => ({
+  id: cat.id,
+  name: cat.name,
+  color: cat.color,
+  icon: cat.icon || undefined,
+  userId: cat.user_id,
+  createdAt: cat.created_at,
+  updatedAt: cat.updated_at,
 });
 
-export const createCategory = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { name, color, icon } = req.body;
+export const getCategories = async (
+  request: FastifyRequest,
+  reply: FastifyReply
+) => {
+  const categories = db.all<CategoryRow>(
+    "SELECT * FROM categories WHERE user_id = ? ORDER BY created_at DESC",
+    [request.userId]
+  );
+
+  return reply.send({
+    success: true,
+    data: categories.map(formatCategory),
+  });
+};
+
+export const createCategory = async (
+  request: FastifyRequest<{ Body: CreateCategoryRequest }>,
+  reply: FastifyReply
+) => {
+  const { name, color, icon } = request.body;
 
   if (!name || !color) {
-    res.status(400).json({ success: false, message: "名称和颜色不能为空" });
-    return;
+    return reply.code(400).send({ success: false, message: "名称和颜色不能为空" });
   }
 
   const categoryId = uuidv4();
 
-  db.run(`INSERT INTO categories (id, name, color, icon, user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))`, [categoryId, name, color, icon, req.userId]);
+  db.run(
+    `INSERT INTO categories (id, name, color, icon, user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+    [categoryId, name, color, icon, request.userId]
+  );
 
   const category = db.get<CategoryRow>("SELECT * FROM categories WHERE id = ?", [categoryId]);
 
-  res.status(201).json({
+  return reply.code(201).send({
     success: true,
-    data: {
-      id: category?.id,
-      name: category?.name,
-      color: category?.color,
-      icon: category?.icon,
-      userId: category?.user_id,
-      createdAt: category?.created_at,
-      updatedAt: category?.updated_at,
-    },
+    data: formatCategory(category!),
   });
-});
+};
 
-export const updateCategory = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { id } = req.params;
-  const { name, color, icon } = req.body;
+export const updateCategory = async (
+  request: FastifyRequest<{ Params: { id: string }; Body: UpdateCategoryRequest }>,
+  reply: FastifyReply
+) => {
+  const { id } = request.params;
+  const { name, color, icon } = request.body;
 
-  const existingCategory = db.get<{ id: string }>("SELECT id FROM categories WHERE id = ? AND user_id = ?", [id, req.userId]);
+  const existingCategory = db.get<{ id: string }>(
+    "SELECT id FROM categories WHERE id = ? AND user_id = ?",
+    [id, request.userId]
+  );
 
   if (!existingCategory) {
-    res.status(404).json({ success: false, message: "分类不存在" });
-    return;
+    return reply.code(404).send({ success: false, message: "分类不存在" });
   }
 
-  db.run(`UPDATE categories SET name = COALESCE(?, name), color = COALESCE(?, color), icon = COALESCE(?, icon), updated_at = datetime('now') WHERE id = ?`, [name, color, icon, id]);
+  db.run(
+    `UPDATE categories SET name = COALESCE(?, name), color = COALESCE(?, color), icon = COALESCE(?, icon), updated_at = datetime('now') WHERE id = ?`,
+    [name, color, icon, id]
+  );
 
   const category = db.get<CategoryRow>("SELECT * FROM categories WHERE id = ?", [id]);
 
-  res.json({
+  return reply.send({
     success: true,
-    data: {
-      id: category?.id,
-      name: category?.name,
-      color: category?.color,
-      icon: category?.icon,
-      userId: category?.user_id,
-      createdAt: category?.created_at,
-      updatedAt: category?.updated_at,
-    },
+    data: formatCategory(category!),
   });
-});
+};
 
-export const deleteCategory = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { id } = req.params;
+export const deleteCategory = async (
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) => {
+  const { id } = request.params;
 
-  const category = db.get<{ id: string }>("SELECT id FROM categories WHERE id = ? AND user_id = ?", [id, req.userId]);
+  const category = db.get<{ id: string }>(
+    "SELECT id FROM categories WHERE id = ? AND user_id = ?",
+    [id, request.userId]
+  );
 
   if (!category) {
-    res.status(404).json({ success: false, message: "分类不存在" });
-    return;
+    return reply.code(404).send({ success: false, message: "分类不存在" });
   }
 
   db.run("DELETE FROM categories WHERE id = ?", [id]);
 
-  res.json({ success: true, message: "删除成功" });
-});
-
-export const getTags = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const tags = db.all<TagRow>("SELECT * FROM tags WHERE user_id = ? ORDER BY created_at DESC", [req.userId]);
-
-  res.json({
-    success: true,
-    data: tags.map((tag) => ({
-      id: tag.id,
-      name: tag.name,
-      color: tag.color,
-      userId: tag.user_id,
-      createdAt: tag.created_at,
-    })),
-  });
-});
-
-export const createTag = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { name, color = "#1890ff" } = req.body;
-
-  if (!name) {
-    res.status(400).json({ success: false, message: "名称不能为空" });
-    return;
-  }
-
-  const tagId = uuidv4();
-
-  db.run(`INSERT INTO tags (id, name, color, user_id, created_at) VALUES (?, ?, ?, ?, datetime('now'))`, [tagId, name, color, req.userId]);
-
-  const tag = db.get<TagRow>("SELECT * FROM tags WHERE id = ?", [tagId]);
-
-  res.status(201).json({
-    success: true,
-    data: {
-      id: tag?.id,
-      name: tag?.name,
-      color: tag?.color,
-      userId: tag?.user_id,
-      createdAt: tag?.created_at,
-    },
-  });
-});
-
-export const deleteTag = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { id } = req.params;
-
-  const tag = db.get<{ id: string }>("SELECT id FROM tags WHERE id = ? AND user_id = ?", [id, req.userId]);
-
-  if (!tag) {
-    res.status(404).json({ success: false, message: "标签不存在" });
-    return;
-  }
-
-  db.run("DELETE FROM tags WHERE id = ?", [id]);
-
-  res.json({ success: true, message: "删除成功" });
-});
+  return reply.send({ success: true, message: "删除成功" });
+};

@@ -16,6 +16,7 @@ export default defineConfig({
       '@utils': path.resolve(__dirname, './src/utils'),
       '@types': path.resolve(__dirname, './src/types'),
       '@assets': path.resolve(__dirname, './src/assets'),
+      '@shared/types': path.resolve(__dirname, '../shared/types'),
     },
   },
   css: {
@@ -25,10 +26,8 @@ export default defineConfig({
         modifyVars: {
           '@primary-color': '#1890ff',
           '@link-color': '#1890ff',
-          '@border-radius-base': '4px',
-          '@font-size-base': '14px',
+          '@border-radius-base': '6px',
         },
-        additionalData: `@import "@/styles/variables.less";`,
       },
     },
   },
@@ -48,5 +47,13 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'antd': ['antd', '@ant-design/icons', '@ant-design/pro-components'],
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+        },
+      },
+    },
   },
 })

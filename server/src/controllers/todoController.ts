@@ -1,8 +1,15 @@
-import { Response } from "express";
+import { FastifyRequest, FastifyReply } from "fastify";
 import { v4 as uuidv4 } from "uuid";
-import { AuthRequest } from "../types";
 import db from "../database";
-import { asyncHandler } from "../middlewares";
+import type {
+  Todo,
+  CreateTodoRequest,
+  UpdateTodoRequest,
+  TodoQueryParams,
+  Category,
+  Tag,
+  Attachment,
+} from "@shared/types";
 
 interface TodoRow {
   id: string;
@@ -36,8 +43,46 @@ interface AttachmentRow {
   created_at: string;
 }
 
-export const getTodos = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { page = 1, limit = 10, status, priority, categoryId, keyword, sortBy = "createdAt", sortOrder = "desc" } = req.query;
+const formatTodo = (
+  todo: TodoRow,
+  tags: Tag[] = [],
+  attachments: Attachment[] = []
+): Todo => ({
+  id: todo.id,
+  title: todo.title,
+  description: todo.description || undefined,
+  status: todo.status as Todo["status"],
+  priority: todo.priority as Todo["priority"],
+  dueDate: todo.due_date || undefined,
+  categoryId: todo.category_id || undefined,
+  category: todo.category_id
+    ? {
+        id: todo.category_id,
+        name: todo.category_name!,
+        color: todo.category_color!,
+      }
+    : undefined,
+  tags,
+  attachments,
+  userId: todo.user_id,
+  createdAt: todo.created_at,
+  updatedAt: todo.updated_at,
+});
+
+export const getTodos = async (
+  request: FastifyRequest<{ Querystring: TodoQueryParams }>,
+  reply: FastifyReply
+) => {
+  const {
+    page = 1,
+    limit = 10,
+    status,
+    priority,
+    categoryId,
+    keyword,
+    sortBy = "createdAt",
+    sortOrder = "desc",
+  } = request.query;
 
   const sortByMap: Record<string, string> = {
     createdAt: "created_at",
@@ -47,10 +92,10 @@ export const getTodos = asyncHandler(async (req: AuthRequest, res: Response) => 
     priority: "priority",
     status: "status",
   };
-  const dbSortBy = sortByMap[sortBy as string] || "created_at";
+  const dbSortBy = sortByMap[sortBy] || "created_at";
 
   let sql = `SELECT t.*, c.id as category_id, c.name as category_name, c.color as category_color FROM todos t LEFT JOIN categories c ON t.category_id = c.id WHERE t.user_id = ?`;
-  const params: unknown[] = [req.userId];
+  const params: unknown[] = [request.userId];
 
   if (status) {
     sql += " AND t.status = ?";
@@ -69,7 +114,10 @@ export const getTodos = asyncHandler(async (req: AuthRequest, res: Response) => 
     params.push(`%${keyword}%`, `%${keyword}%`);
   }
 
-  const countSql = sql.replace("SELECT t.*, c.id as category_id, c.name as category_name, c.color as category_color", "SELECT COUNT(*) as total");
+  const countSql = sql.replace(
+    "SELECT t.*, c.id as category_id, c.name as category_name, c.color as category_color",
+    "SELECT COUNT(*) as total"
+  );
   const countResult = db.get<{ total: number }>(countSql, params);
   const total = countResult?.total || 0;
 
@@ -79,20 +127,18 @@ export const getTodos = asyncHandler(async (req: AuthRequest, res: Response) => 
   const todos = db.all<TodoRow>(sql, params);
 
   const todosWithDetails = todos.map((todo) => {
-    const tags = db.all<TagRow>(`SELECT t.id, t.name, t.color FROM tags t INNER JOIN todo_tags tt ON t.id = tt.tag_id WHERE tt.todo_id = ?`, [todo.id]);
-    const attachments = db.all<AttachmentRow>(`SELECT id, filename, original_name, mime_type, size, url, todo_id, created_at FROM attachments WHERE todo_id = ?`, [todo.id]);
-
-    return {
-      id: todo.id,
-      title: todo.title,
-      description: todo.description,
-      status: todo.status,
-      priority: todo.priority,
-      dueDate: todo.due_date,
-      categoryId: todo.category_id,
-      category: todo.category_id ? { id: todo.category_id, name: todo.category_name, color: todo.category_color } : null,
+    const tags = db.all<Tag>(
+      `SELECT t.id, t.name, t.color FROM tags t INNER JOIN todo_tags tt ON t.id = tt.tag_id WHERE tt.todo_id = ?`,
+      [todo.id]
+    );
+    const attachments = db.all<AttachmentRow>(
+      `SELECT id, filename, original_name, mime_type, size, url, todo_id, created_at FROM attachments WHERE todo_id = ?`,
+      [todo.id]
+    );
+    return formatTodo(
+      todo,
       tags,
-      attachments: attachments.map((a) => ({
+      attachments.map((a) => ({
         id: a.id,
         filename: a.filename,
         originalName: a.original_name,
@@ -101,14 +147,11 @@ export const getTodos = asyncHandler(async (req: AuthRequest, res: Response) => 
         url: a.url,
         todoId: a.todo_id,
         createdAt: a.created_at,
-      })),
-      userId: todo.user_id,
-      createdAt: todo.created_at,
-      updatedAt: todo.updated_at,
-    };
+      }))
+    );
   });
 
-  res.json({
+  return reply.send({
     success: true,
     data: {
       items: todosWithDetails,
@@ -118,37 +161,38 @@ export const getTodos = asyncHandler(async (req: AuthRequest, res: Response) => 
       totalPages: Math.ceil(total / Number(limit)),
     },
   });
-});
+};
 
-export const getTodoById = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { id } = req.params;
+export const getTodoById = async (
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) => {
+  const { id } = request.params;
 
   const todo = db.get<TodoRow>(
     `SELECT t.*, c.id as category_id, c.name as category_name, c.color as category_color FROM todos t LEFT JOIN categories c ON t.category_id = c.id WHERE t.id = ? AND t.user_id = ?`,
-    [id, req.userId],
+    [id, request.userId]
   );
 
   if (!todo) {
-    res.status(404).json({ success: false, message: "待办事项不存在" });
-    return;
+    return reply.code(404).send({ success: false, message: "待办事项不存在" });
   }
 
-  const tags = db.all<TagRow>(`SELECT t.id, t.name, t.color FROM tags t INNER JOIN todo_tags tt ON t.id = tt.tag_id WHERE tt.todo_id = ?`, [todo.id]);
-  const attachments = db.all<AttachmentRow>(`SELECT id, filename, original_name, mime_type, size, url, todo_id, created_at FROM attachments WHERE todo_id = ?`, [todo.id]);
+  const tags = db.all<Tag>(
+    `SELECT t.id, t.name, t.color FROM tags t INNER JOIN todo_tags tt ON t.id = tt.tag_id WHERE tt.todo_id = ?`,
+    [todo.id]
+  );
+  const attachments = db.all<AttachmentRow>(
+    `SELECT id, filename, original_name, mime_type, size, url, todo_id, created_at FROM attachments WHERE todo_id = ?`,
+    [todo.id]
+  );
 
-  res.json({
+  return reply.send({
     success: true,
-    data: {
-      id: todo.id,
-      title: todo.title,
-      description: todo.description,
-      status: todo.status,
-      priority: todo.priority,
-      dueDate: todo.due_date,
-      categoryId: todo.category_id,
-      category: todo.category_id ? { id: todo.category_id, name: todo.category_name, color: todo.category_color } : null,
+    data: formatTodo(
+      todo,
       tags,
-      attachments: attachments.map((a) => ({
+      attachments.map((a) => ({
         id: a.id,
         filename: a.filename,
         originalName: a.original_name,
@@ -157,33 +201,27 @@ export const getTodoById = asyncHandler(async (req: AuthRequest, res: Response) 
         url: a.url,
         todoId: a.todo_id,
         createdAt: a.created_at,
-      })),
-      userId: todo.user_id,
-      createdAt: todo.created_at,
-      updatedAt: todo.updated_at,
-    },
+      }))
+    ),
   });
-});
+};
 
-export const createTodo = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { title, description, priority = "medium", dueDate, categoryId, tagIds = [] } = req.body;
+export const createTodo = async (
+  request: FastifyRequest<{ Body: CreateTodoRequest }>,
+  reply: FastifyReply
+) => {
+  const { title, description, priority = "medium", dueDate, categoryId, tagIds = [] } = request.body;
 
   if (!title) {
-    res.status(400).json({ success: false, message: "标题不能为空" });
-    return;
+    return reply.code(400).send({ success: false, message: "标题不能为空" });
   }
 
   const todoId = uuidv4();
 
-  db.run(`INSERT INTO todos (id, title, description, priority, due_date, category_id, user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`, [
-    todoId,
-    title,
-    description,
-    priority,
-    dueDate,
-    categoryId,
-    req.userId,
-  ]);
+  db.run(
+    `INSERT INTO todos (id, title, description, priority, due_date, category_id, user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+    [todoId, title, description, priority, dueDate, categoryId, request.userId]
+  );
 
   if (tagIds.length > 0) {
     for (const tagId of tagIds) {
@@ -193,39 +231,31 @@ export const createTodo = asyncHandler(async (req: AuthRequest, res: Response) =
 
   const todo = db.get<TodoRow>("SELECT * FROM todos WHERE id = ?", [todoId]);
 
-  res.status(201).json({
+  return reply.code(201).send({
     success: true,
-    data: {
-      id: todo?.id,
-      title: todo?.title,
-      description: todo?.description,
-      status: todo?.status,
-      priority: todo?.priority,
-      dueDate: todo?.due_date,
-      categoryId: todo?.category_id,
-      tags: [],
-      attachments: [],
-      userId: todo?.user_id,
-      createdAt: todo?.created_at,
-      updatedAt: todo?.updated_at,
-    },
+    data: formatTodo(todo!),
   });
-});
+};
 
-export const updateTodo = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { id } = req.params;
-  const { title, description, status, priority, dueDate, categoryId, tagIds } = req.body;
+export const updateTodo = async (
+  request: FastifyRequest<{ Params: { id: string }; Body: UpdateTodoRequest }>,
+  reply: FastifyReply
+) => {
+  const { id } = request.params;
+  const { title, description, status, priority, dueDate, categoryId, tagIds } = request.body;
 
-  const existingTodo = db.get<TodoRow>("SELECT * FROM todos WHERE id = ? AND user_id = ?", [id, req.userId]);
+  const existingTodo = db.get<TodoRow>(
+    "SELECT * FROM todos WHERE id = ? AND user_id = ?",
+    [id, request.userId]
+  );
 
   if (!existingTodo) {
-    res.status(404).json({ success: false, message: "待办事项不存在" });
-    return;
+    return reply.code(404).send({ success: false, message: "待办事项不存在" });
   }
 
   db.run(
     `UPDATE todos SET title = COALESCE(?, title), description = COALESCE(?, description), status = COALESCE(?, status), priority = COALESCE(?, priority), due_date = COALESCE(?, due_date), category_id = COALESCE(?, category_id), updated_at = datetime('now') WHERE id = ?`,
-    [title, description, status, priority, dueDate, categoryId, id],
+    [title, description, status, priority, dueDate, categoryId, id]
   );
 
   if (tagIds !== undefined) {
@@ -236,21 +266,21 @@ export const updateTodo = asyncHandler(async (req: AuthRequest, res: Response) =
   }
 
   const todo = db.get<TodoRow>("SELECT * FROM todos WHERE id = ?", [id]);
-  const tags = db.all<TagRow>(`SELECT t.id, t.name, t.color FROM tags t INNER JOIN todo_tags tt ON t.id = tt.tag_id WHERE tt.todo_id = ?`, [id]);
-  const attachments = db.all<AttachmentRow>(`SELECT id, filename, original_name, mime_type, size, url, todo_id, created_at FROM attachments WHERE todo_id = ?`, [id]);
+  const tags = db.all<Tag>(
+    `SELECT t.id, t.name, t.color FROM tags t INNER JOIN todo_tags tt ON t.id = tt.tag_id WHERE tt.todo_id = ?`,
+    [id]
+  );
+  const attachments = db.all<AttachmentRow>(
+    `SELECT id, filename, original_name, mime_type, size, url, todo_id, created_at FROM attachments WHERE todo_id = ?`,
+    [id]
+  );
 
-  res.json({
+  return reply.send({
     success: true,
-    data: {
-      id: todo?.id,
-      title: todo?.title,
-      description: todo?.description,
-      status: todo?.status,
-      priority: todo?.priority,
-      dueDate: todo?.due_date,
-      categoryId: todo?.category_id,
+    data: formatTodo(
+      todo!,
       tags,
-      attachments: attachments.map((a) => ({
+      attachments.map((a) => ({
         id: a.id,
         filename: a.filename,
         originalName: a.original_name,
@@ -259,25 +289,78 @@ export const updateTodo = asyncHandler(async (req: AuthRequest, res: Response) =
         url: a.url,
         todoId: a.todo_id,
         createdAt: a.created_at,
-      })),
-      userId: todo?.user_id,
-      createdAt: todo?.created_at,
-      updatedAt: todo?.updated_at,
-    },
+      }))
+    ),
   });
-});
+};
 
-export const deleteTodo = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { id } = req.params;
+export const deleteTodo = async (
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) => {
+  const { id } = request.params;
 
-  const todo = db.get<TodoRow>("SELECT * FROM todos WHERE id = ? AND user_id = ?", [id, req.userId]);
+  const todo = db.get<TodoRow>(
+    "SELECT * FROM todos WHERE id = ? AND user_id = ?",
+    [id, request.userId]
+  );
 
   if (!todo) {
-    res.status(404).json({ success: false, message: "待办事项不存在" });
-    return;
+    return reply.code(404).send({ success: false, message: "待办事项不存在" });
   }
 
   db.run("DELETE FROM todos WHERE id = ?", [id]);
 
-  res.json({ success: true, message: "删除成功" });
-});
+  return reply.send({ success: true, message: "删除成功" });
+};
+
+export const toggleTodoStatus = async (
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply
+) => {
+  const { id } = request.params;
+
+  const todo = db.get<TodoRow>(
+    "SELECT * FROM todos WHERE id = ? AND user_id = ?",
+    [id, request.userId]
+  );
+
+  if (!todo) {
+    return reply.code(404).send({ success: false, message: "待办事项不存在" });
+  }
+
+  const newStatus = todo.status === "completed" ? "pending" : "completed";
+
+  db.run(`UPDATE todos SET status = ?, updated_at = datetime('now') WHERE id = ?`, [
+    newStatus,
+    id,
+  ]);
+
+  const updatedTodo = db.get<TodoRow>("SELECT * FROM todos WHERE id = ?", [id]);
+  const tags = db.all<Tag>(
+    `SELECT t.id, t.name, t.color FROM tags t INNER JOIN todo_tags tt ON t.id = tt.tag_id WHERE tt.todo_id = ?`,
+    [id]
+  );
+  const attachments = db.all<AttachmentRow>(
+    `SELECT id, filename, original_name, mime_type, size, url, todo_id, created_at FROM attachments WHERE todo_id = ?`,
+    [id]
+  );
+
+  return reply.send({
+    success: true,
+    data: formatTodo(
+      updatedTodo!,
+      tags,
+      attachments.map((a) => ({
+        id: a.id,
+        filename: a.filename,
+        originalName: a.original_name,
+        mimeType: a.mime_type,
+        size: a.size,
+        url: a.url,
+        todoId: a.todo_id,
+        createdAt: a.created_at,
+      }))
+    ),
+  });
+};

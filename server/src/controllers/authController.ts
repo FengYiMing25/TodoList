@@ -1,40 +1,66 @@
-import { Response } from "express";
+import { FastifyRequest, FastifyReply } from "fastify";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
-import { AuthRequest } from "../types";
 import db from "../database";
-import { generateToken, asyncHandler } from "../middlewares";
+import { generateToken } from "../middlewares/auth";
+import { deleteAttachmentsByEntity } from "../routes/upload";
+import type { RegisterRequest, LoginRequest, User } from "@shared/types";
 
-export const register = asyncHandler(async (req: AuthRequest, res: Response) => {
-  console.log('Register request received:', req.body);
-  const { username, email, password } = req.body;
+interface UpdateProfileBody {
+  username?: string;
+  email?: string;
+  avatar?: string;
+}
+
+interface UserRow {
+  id: string;
+  username: string;
+  email: string;
+  password: string;
+  avatar: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+const formatUser = (user: UserRow): User => ({
+  id: user.id,
+  username: user.username,
+  email: user.email,
+  avatar: user.avatar || undefined,
+  createdAt: user.created_at,
+  updatedAt: user.updated_at,
+});
+
+export const register = async (
+  request: FastifyRequest<{ Body: RegisterRequest }>,
+  reply: FastifyReply
+) => {
+  const { username, email, password } = request.body;
 
   if (!username || !email || !password) {
-    res.status(400).json({ success: false, message: "请填写所有必填项" });
-    return;
+    return reply.code(400).send({ success: false, message: "请填写所有必填项" });
   }
 
-  console.log('Checking existing user...');
-  const existingUser = db.get<{ id: string }>("SELECT id FROM users WHERE username = ? OR email = ?", [username, email]);
-  console.log('Existing user:', existingUser);
+  const existingUser = db.get<{ id: string }>(
+    "SELECT id FROM users WHERE username = ? OR email = ?",
+    [username, email]
+  );
 
   if (existingUser) {
-    res.status(400).json({ success: false, message: "用户名或邮箱已存在" });
-    return;
+    return reply.code(400).send({ success: false, message: "用户名或邮箱已存在" });
   }
 
-  console.log('Hashing password...');
   const hashedPassword = await bcrypt.hash(password, 10);
   const userId = uuidv4();
-  console.log('Generated userId:', userId);
 
-  console.log('Inserting user...');
-  db.run(`INSERT INTO users (id, username, email, password, created_at, updated_at) VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))`, [userId, username, email, hashedPassword]);
-  console.log('User inserted successfully');
+  db.run(
+    `INSERT INTO users (id, username, email, password, created_at, updated_at) VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))`,
+    [userId, username, email, hashedPassword]
+  );
 
   const token = generateToken(userId);
 
-  res.status(201).json({
+  return reply.code(201).send({
     success: true,
     data: {
       user: {
@@ -47,99 +73,105 @@ export const register = asyncHandler(async (req: AuthRequest, res: Response) => 
       token,
     },
   });
-});
+};
 
-export const login = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { username, password } = req.body;
+export const login = async (
+  request: FastifyRequest<{ Body: LoginRequest }>,
+  reply: FastifyReply
+) => {
+  const { username, password } = request.body;
 
   if (!username || !password) {
-    res.status(400).json({ success: false, message: "请输入用户名和密码" });
-    return;
+    return reply.code(400).send({ success: false, message: "请输入用户名和密码" });
   }
 
-  const user = db.get<{ id: string; username: string; email: string; password: string; avatar: string; created_at: string; updated_at: string }>(
+  const user = db.get<UserRow>(
     "SELECT * FROM users WHERE username = ? OR email = ?",
-    [username, username],
+    [username, username]
   );
 
   if (!user) {
-    res.status(401).json({ success: false, message: "用户名或密码错误" });
-    return;
+    return reply.code(401).send({ success: false, message: "用户名或密码错误" });
   }
 
   const isMatch = await bcrypt.compare(password, user.password);
 
   if (!isMatch) {
-    res.status(401).json({ success: false, message: "用户名或密码错误" });
-    return;
+    return reply.code(401).send({ success: false, message: "用户名或密码错误" });
   }
 
   const token = generateToken(user.id);
 
-  res.json({
+  return reply.send({
     success: true,
     data: {
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        avatar: user.avatar,
-        createdAt: user.created_at,
-        updatedAt: user.updated_at,
-      },
+      user: formatUser(user),
       token,
     },
   });
-});
+};
 
-export const getProfile = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const user = db.get<{ id: string; username: string; email: string; avatar: string; created_at: string; updated_at: string }>(
+export const getProfile = async (
+  request: FastifyRequest,
+  reply: FastifyReply
+) => {
+  const user = db.get<UserRow>(
     "SELECT id, username, email, avatar, created_at, updated_at FROM users WHERE id = ?",
-    [req.userId!],
+    [request.userId!]
   );
 
   if (!user) {
-    res.status(404).json({ success: false, message: "用户不存在" });
-    return;
+    return reply.code(404).send({ success: false, message: "用户不存在" });
   }
 
-  res.json({
+  return reply.send({
     success: true,
-    data: {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      avatar: user.avatar,
-      createdAt: user.created_at,
-      updatedAt: user.updated_at,
-    },
+    data: formatUser(user),
   });
-});
+};
 
-export const updateProfile = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const { username, email, avatar } = req.body;
+export const updateProfile = async (
+  request: FastifyRequest<{ Body: UpdateProfileBody }>,
+  reply: FastifyReply
+) => {
+  const { username, email, avatar } = request.body;
 
-  db.run(`UPDATE users SET username = COALESCE(?, username), email = COALESCE(?, email), avatar = COALESCE(?, avatar), updated_at = datetime('now') WHERE id = ?`, [
-    username,
-    email,
-    avatar,
-    req.userId,
-  ]);
-
-  const user = db.get<{ id: string; username: string; email: string; avatar: string; created_at: string; updated_at: string }>(
-    "SELECT id, username, email, avatar, created_at, updated_at FROM users WHERE id = ?",
-    [req.userId!],
+  const oldUser = db.get<UserRow>(
+    "SELECT avatar FROM users WHERE id = ?",
+    [request.userId!]
   );
 
-  res.json({
+  if (oldUser?.avatar && avatar && oldUser.avatar !== avatar) {
+    const oldAttachment = db.get<{ id: string; filename: string }>(
+      "SELECT id, filename FROM attachments WHERE url = ?",
+      [oldUser.avatar]
+    );
+    if (oldAttachment) {
+      const { deleteAttachmentFile } = await import("../routes/upload");
+      deleteAttachmentFile(oldAttachment.filename);
+      db.run("DELETE FROM attachments WHERE id = ?", [oldAttachment.id]);
+    }
+  }
+
+  if (avatar && avatar !== oldUser?.avatar) {
+    db.run(
+      `UPDATE attachments SET entity_type = ?, entity_id = ? WHERE url = ?`,
+      ["user", request.userId!, avatar]
+    );
+  }
+
+  db.run(
+    `UPDATE users SET username = COALESCE(?, username), email = COALESCE(?, email), avatar = COALESCE(?, avatar), updated_at = datetime('now') WHERE id = ?`,
+    [username, email, avatar, request.userId]
+  );
+
+  const user = db.get<UserRow>(
+    "SELECT id, username, email, avatar, created_at, updated_at FROM users WHERE id = ?",
+    [request.userId!]
+  );
+
+  return reply.send({
     success: true,
-    data: {
-      id: user?.id,
-      username: user?.username,
-      email: user?.email,
-      avatar: user?.avatar,
-      createdAt: user?.created_at,
-      updatedAt: user?.updated_at,
-    },
+    data: formatUser(user!),
   });
-});
+};

@@ -1,24 +1,24 @@
 import { useEffect, useState } from 'react'
 import {
-  Box,
   Card,
-  CardContent,
-  Typography,
   Button,
-  Grid,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Chip,
   Tabs,
-  Tab,
-} from '@mui/material'
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material'
+  Row,
+  Col,
+  Modal,
+  Form,
+  Input,
+  Tag,
+  Popconfirm,
+} from 'antd'
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+} from '@ant-design/icons'
 import { useCategoryStore } from '@stores/categoryStore'
-import type { Category, Tag, CreateCategoryRequest, CreateTagRequest } from '@types'
+import { useMessage } from '@hooks/useMessage'
+import type { Category, Tag as TagType, CreateCategoryRequest, CreateTagRequest } from '@types'
 import styles from './Categories.module.less'
 
 const predefinedColors = [
@@ -26,22 +26,10 @@ const predefinedColors = [
   '#13c2c2', '#eb2f96', '#fa8c16', '#a0d911', '#2f54eb',
 ]
 
-interface CategoryFormData {
-  name: string
-  color: string
-  icon: string
-}
-
-interface TagFormData {
-  name: string
-  color: string
-}
-
 const Categories: React.FC = () => {
   const {
     categories,
     tags,
-    isLoading,
     fetchCategories,
     createCategory,
     updateCategory,
@@ -51,22 +39,13 @@ const Categories: React.FC = () => {
     deleteTag,
   } = useCategoryStore()
 
-  const [tabValue, setTabValue] = useState(0)
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
   const [tagDialogOpen, setTagDialogOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
-  const [editingTag, setEditingTag] = useState<Tag | null>(null)
-
-  const [categoryForm, setCategoryForm] = useState<CategoryFormData>({
-    name: '',
-    color: predefinedColors[0],
-    icon: '',
-  })
-
-  const [tagForm, setTagForm] = useState<TagFormData>({
-    name: '',
-    color: predefinedColors[0],
-  })
+  const [editingTag, setEditingTag] = useState<TagType | null>(null)
+  const [categoryForm] = Form.useForm()
+  const [tagForm] = Form.useForm()
+  const message = useMessage()
 
   useEffect(() => {
     fetchCategories()
@@ -76,14 +55,15 @@ const Categories: React.FC = () => {
   const handleOpenCategoryDialog = (category?: Category) => {
     if (category) {
       setEditingCategory(category)
-      setCategoryForm({
+      categoryForm.setFieldsValue({
         name: category.name,
         color: category.color,
         icon: category.icon || '',
       })
     } else {
       setEditingCategory(null)
-      setCategoryForm({ name: '', color: predefinedColors[0], icon: '' })
+      categoryForm.resetFields()
+      categoryForm.setFieldsValue({ color: predefinedColors[0] })
     }
     setCategoryDialogOpen(true)
   }
@@ -91,36 +71,45 @@ const Categories: React.FC = () => {
   const handleCloseCategoryDialog = () => {
     setCategoryDialogOpen(false)
     setEditingCategory(null)
+    categoryForm.resetFields()
   }
 
   const handleSubmitCategory = async () => {
-    if (!categoryForm.name.trim()) return
-
     try {
+      const values = await categoryForm.validateFields()
       if (editingCategory) {
-        await updateCategory(editingCategory.id, categoryForm)
+        await updateCategory(editingCategory.id, values)
+        message.success('更新成功')
       } else {
-        await createCategory(categoryForm as CreateCategoryRequest)
+        await createCategory(values as CreateCategoryRequest)
+        message.success('创建成功')
       }
       handleCloseCategoryDialog()
     } catch (error) {
-      console.error('Failed to save category:', error)
+      message.error('操作失败')
     }
   }
 
   const handleDeleteCategory = async (id: string) => {
-    if (window.confirm('确定要删除这个分类吗？')) {
+    try {
       await deleteCategory(id)
+      message.success('删除成功')
+    } catch (error) {
+      message.error('删除失败')
     }
   }
 
-  const handleOpenTagDialog = (tag?: Tag) => {
+  const handleOpenTagDialog = (tag?: TagType) => {
     if (tag) {
       setEditingTag(tag)
-      setTagForm({ name: tag.name, color: tag.color })
+      tagForm.setFieldsValue({
+        name: tag.name,
+        color: tag.color,
+      })
     } else {
       setEditingTag(null)
-      setTagForm({ name: '', color: predefinedColors[0] })
+      tagForm.resetFields()
+      tagForm.setFieldsValue({ color: predefinedColors[0] })
     }
     setTagDialogOpen(true)
   }
@@ -128,182 +117,196 @@ const Categories: React.FC = () => {
   const handleCloseTagDialog = () => {
     setTagDialogOpen(false)
     setEditingTag(null)
+    tagForm.resetFields()
   }
 
   const handleSubmitTag = async () => {
-    if (!tagForm.name.trim()) return
-
     try {
+      const values = await tagForm.validateFields()
       if (editingTag) {
-        console.log('Update tag:', editingTag.id, tagForm)
+        message.info('标签更新功能开发中')
       } else {
-        await createTag(tagForm as CreateTagRequest)
+        await createTag(values as CreateTagRequest)
+        message.success('创建成功')
       }
       handleCloseTagDialog()
     } catch (error) {
-      console.error('Failed to save tag:', error)
+      message.error('操作失败')
     }
   }
 
   const handleDeleteTag = async (id: string) => {
-    if (window.confirm('确定要删除这个标签吗？')) {
+    try {
       await deleteTag(id)
+      message.success('删除成功')
+    } catch (error) {
+      message.error('删除失败')
     }
   }
 
+  const categoryItems = [
+    {
+      key: 'categories',
+      label: `分类 (${categories.length})`,
+      children: (
+        <div>
+          <div className={styles.sectionHeader}>
+            <span className={styles.sectionTitle}>分类列表</span>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => handleOpenCategoryDialog()}
+            >
+              新建分类
+            </Button>
+          </div>
+          <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+            {categories.map((category) => (
+              <Col key={category.id} xs={24} sm={12} md={8} lg={6}>
+                <Card
+                  className={styles.itemCard}
+                  actions={[
+                    <Button
+                      key="edit"
+                      type="text"
+                      icon={<EditOutlined />}
+                      onClick={() => handleOpenCategoryDialog(category)}
+                    />,
+                    <Popconfirm
+                      key="delete"
+                      title="确定要删除这个分类吗？"
+                      onConfirm={() => handleDeleteCategory(category.id)}
+                      okText="确定"
+                      cancelText="取消"
+                    >
+                      <Button type="text" danger icon={<DeleteOutlined />} />
+                    </Popconfirm>,
+                  ]}
+                >
+                  <div className={styles.itemContent}>
+                    <div
+                      className={styles.colorDot}
+                      style={{ backgroundColor: category.color }}
+                    />
+                    <span className={styles.itemName}>{category.name}</span>
+                  </div>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        </div>
+      ),
+    },
+    {
+      key: 'tags',
+      label: `标签 (${tags.length})`,
+      children: (
+        <div>
+          <div className={styles.sectionHeader}>
+            <span className={styles.sectionTitle}>标签列表</span>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => handleOpenTagDialog()}
+            >
+              新建标签
+            </Button>
+          </div>
+          <div className={styles.tagList}>
+            {tags.map((tag) => (
+              <Tag
+                key={tag.id}
+                color={tag.color}
+                closable
+                onClose={(e) => {
+                  e.preventDefault()
+                  handleDeleteTag(tag.id)
+                }}
+                style={{ margin: 4 }}
+              >
+                {tag.name}
+              </Tag>
+            ))}
+          </div>
+        </div>
+      ),
+    },
+  ]
+
   return (
-    <Box className={styles.container}>
-      <Box className={styles.header}>
-        <Typography variant="h4" className={styles.pageTitle}>
-          分类管理
-        </Typography>
-      </Box>
-
+    <div className={styles.container}>
       <Card>
-        <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)}>
-          <Tab label={`分类 (${categories.length})`} />
-          <Tab label={`标签 (${tags.length})`} />
-        </Tabs>
-
-        <CardContent>
-          {tabValue === 0 && (
-            <Box>
-              <Box className={styles.sectionHeader}>
-                <Typography variant="h6">分类列表</Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={() => handleOpenCategoryDialog()}
-                >
-                  新建分类
-                </Button>
-              </Box>
-              <Grid container spacing={2}>
-                {categories.map((category) => (
-                  <Grid item key={category.id} xs={12} sm={6} md={4}>
-                    <Card className={styles.itemCard}>
-                      <CardContent className={styles.itemContent}>
-                        <Box className={styles.itemHeader}>
-                          <Box
-                            className={styles.colorDot}
-                            style={{ backgroundColor: category.color }}
-                          />
-                          <Typography variant="subtitle1" className={styles.itemName}>
-                            {category.name}
-                          </Typography>
-                        </Box>
-                        <Box className={styles.itemActions}>
-                          <IconButton size="small" onClick={() => handleOpenCategoryDialog(category)}>
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                          <IconButton size="small" onClick={() => handleDeleteCategory(category.id)}>
-                            <DeleteIcon fontSize="small" color="error" />
-                          </IconButton>
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-          )}
-
-          {tabValue === 1 && (
-            <Box>
-              <Box className={styles.sectionHeader}>
-                <Typography variant="h6">标签列表</Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={() => handleOpenTagDialog()}
-                >
-                  新建标签
-                </Button>
-              </Box>
-              <Box className={styles.tagList}>
-                {tags.map((tag) => (
-                  <Chip
-                    key={tag.id}
-                    label={tag.name}
-                    onDelete={() => handleDeleteTag(tag.id)}
-                    onClick={() => handleOpenTagDialog(tag)}
-                    style={{ backgroundColor: tag.color, color: '#fff', margin: 4 }}
-                  />
-                ))}
-              </Box>
-            </Box>
-          )}
-        </CardContent>
+        <Tabs items={categoryItems} />
       </Card>
 
-      <Dialog open={categoryDialogOpen} onClose={handleCloseCategoryDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingCategory ? '编辑分类' : '新建分类'}</DialogTitle>
-        <DialogContent>
-          <Box className={styles.form}>
-            <TextField
-              fullWidth
-              label="分类名称"
-              value={categoryForm.name}
-              onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-              margin="normal"
-            />
-            <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
-              选择颜色
-            </Typography>
-            <Box className={styles.colorPicker}>
+      <Modal
+        title={editingCategory ? '编辑分类' : '新建分类'}
+        open={categoryDialogOpen}
+        onCancel={handleCloseCategoryDialog}
+        onOk={handleSubmitCategory}
+        destroyOnHidden
+      >
+        <Form form={categoryForm} layout="vertical" preserve={false}>
+          <Form.Item
+            name="name"
+            label="分类名称"
+            rules={[{ required: true, message: '请输入分类名称' }]}
+          >
+            <Input placeholder="请输入分类名称" />
+          </Form.Item>
+          <Form.Item name="color" label="颜色" initialValue={predefinedColors[0]}>
+            <div className={styles.colorPicker}>
               {predefinedColors.map((color) => (
-                <Box
+                <div
                   key={color}
-                  className={`${styles.colorOption} ${categoryForm.color === color ? styles.colorSelected : ''}`}
+                  className={`${styles.colorOption} ${
+                    categoryForm.getFieldValue('color') === color
+                      ? styles.colorSelected
+                      : ''
+                  }`}
                   style={{ backgroundColor: color }}
-                  onClick={() => setCategoryForm({ ...categoryForm, color })}
+                  onClick={() => categoryForm.setFieldsValue({ color })}
                 />
               ))}
-            </Box>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseCategoryDialog}>取消</Button>
-          <Button variant="contained" onClick={handleSubmitCategory} disabled={isLoading}>
-            {editingCategory ? '保存' : '创建'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+            </div>
+          </Form.Item>
+        </Form>
+      </Modal>
 
-      <Dialog open={tagDialogOpen} onClose={handleCloseTagDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingTag ? '编辑标签' : '新建标签'}</DialogTitle>
-        <DialogContent>
-          <Box className={styles.form}>
-            <TextField
-              fullWidth
-              label="标签名称"
-              value={tagForm.name}
-              onChange={(e) => setTagForm({ ...tagForm, name: e.target.value })}
-              margin="normal"
-            />
-            <Typography variant="subtitle2" sx={{ mt: 2, mb: 1 }}>
-              选择颜色
-            </Typography>
-            <Box className={styles.colorPicker}>
+      <Modal
+        title={editingTag ? '编辑标签' : '新建标签'}
+        open={tagDialogOpen}
+        onCancel={handleCloseTagDialog}
+        onOk={handleSubmitTag}
+        destroyOnHidden
+      >
+        <Form form={tagForm} layout="vertical" preserve={false}>
+          <Form.Item
+            name="name"
+            label="标签名称"
+            rules={[{ required: true, message: '请输入标签名称' }]}
+          >
+            <Input placeholder="请输入标签名称" />
+          </Form.Item>
+          <Form.Item name="color" label="颜色" initialValue={predefinedColors[0]}>
+            <div className={styles.colorPicker}>
               {predefinedColors.map((color) => (
-                <Box
+                <div
                   key={color}
-                  className={`${styles.colorOption} ${tagForm.color === color ? styles.colorSelected : ''}`}
+                  className={`${styles.colorOption} ${
+                    tagForm.getFieldValue('color') === color
+                      ? styles.colorSelected
+                      : ''
+                  }`}
                   style={{ backgroundColor: color }}
-                  onClick={() => setTagForm({ ...tagForm, color })}
+                  onClick={() => tagForm.setFieldsValue({ color })}
                 />
               ))}
-            </Box>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseTagDialog}>取消</Button>
-          <Button variant="contained" onClick={handleSubmitTag} disabled={isLoading}>
-            {editingTag ? '保存' : '创建'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+            </div>
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
   )
 }
 

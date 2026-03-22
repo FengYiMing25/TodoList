@@ -1,7 +1,7 @@
 {
   "name": "todo-server",
   "version": "1.0.0",
-  "description": "Todo List API Server",
+  "description": "Todo List API Server - Fastify",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -10,11 +10,15 @@
     "lint": "eslint src/**/*.ts --fix"
   },
   "dependencies": {
+    "@fastify/cors": "^9.0.1",
+    "@fastify/helmet": "^11.1.1",
+    "@fastify/compress": "^7.0.0",
+    "@fastify/rate-limit": "^9.1.0",
+    "@fastify/multipart": "^8.2.0",
+    "@fastify/static": "^7.0.1",
     "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5",
     "dotenv": "^16.4.1",
-    "express": "^4.18.2",
-    "express-validator": "^7.0.1",
+    "fastify": "^4.26.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "sql.js": "^1.10.0",
@@ -22,8 +26,6 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/multer": "^1.4.11",
     "@types/node": "^20.11.17",
@@ -31,6 +33,7 @@
     "eslint": "^8.56.0",
     "@typescript-eslint/eslint-plugin": "^7.0.1",
     "@typescript-eslint/parser": "^7.0.1",
+    "pino-pretty": "^10.3.1",
     "tsx": "^4.7.1",
     "typescript": "^5.3.3"
   }

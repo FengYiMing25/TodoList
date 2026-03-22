@@ -1,0 +1,20 @@
+.progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 10000;
+  transition: opacity 0.2s ease;
+}
+
+.progressBar {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--ant-color-primary) 0%,
+    var(--ant-color-primary-hover) 100%
+  );
+  transition: width 0.2s ease;
+  box-shadow: 0 0 10px var(--ant-color-primary);
+}

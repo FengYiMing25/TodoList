@@ -1,114 +1,95 @@
-import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import {
-  Box,
   Card,
-  CardContent,
-  TextField,
+  Form,
+  Input,
   Button,
-  Typography,
-  Alert,
-  InputAdornment,
-  IconButton,
-} from '@mui/material'
-import { Visibility, VisibilityOff, Login as LoginIcon } from '@mui/icons-material'
+} from 'antd'
+import {
+  UserOutlined,
+  LockOutlined,
+  EyeTwoTone,
+  EyeInvisibleOutlined,
+  LoginOutlined,
+} from '@ant-design/icons'
 import { useAuthStore } from '@stores/authStore'
+import { useMessage } from '@hooks/useMessage'
 import styles from './Login.module.less'
 
 const Login: React.FC = () => {
   const navigate = useNavigate()
   const { login, isLoading } = useAuthStore()
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState('')
+  const [form] = Form.useForm()
+  const message = useMessage()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-
-    if (!username.trim() || !password.trim()) {
-      setError('请输入用户名和密码')
-      return
-    }
-
+  const handleSubmit = async (values: { username: string; password: string }) => {
     try {
-      await login(username.trim(), password)
+      await login(values.username.trim(), values.password)
+      message.success('登录成功')
       navigate('/')
     } catch (err) {
-      setError(err instanceof Error ? err.message : '登录失败')
+      message.error(err instanceof Error ? err.message : '登录失败')
     }
   }
 
   return (
-    <Box className={styles.container}>
+    <div className={styles.container}>
       <Card className={styles.card}>
-        <CardContent className={styles.cardContent}>
-          <Typography variant="h4" component="h1" className={styles.title}>
-            待办事项系统
-          </Typography>
-          <Typography variant="body2" color="text.secondary" className={styles.subtitle}>
-            登录您的账户
-          </Typography>
+        <div className={styles.header}>
+          <h1 className={styles.title}>待办事项系统</h1>
+          <p className={styles.subtitle}>登录您的账户</p>
+        </div>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-
-          <form onSubmit={handleSubmit}>
-            <TextField
-              fullWidth
-              label="用户名"
-              variant="outlined"
-              margin="normal"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoFocus
+        <Form
+          form={form}
+          onFinish={handleSubmit}
+          layout="vertical"
+          size="large"
+        >
+          <Form.Item
+            name="username"
+            rules={[{ required: true, message: '请输入用户名' }]}
+          >
+            <Input
+              prefix={<UserOutlined />}
+              placeholder="用户名"
+              autoComplete="username"
             />
-            <TextField
-              fullWidth
-              label="密码"
-              type={showPassword ? 'text' : 'password'}
-              variant="outlined"
-              margin="normal"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
+          </Form.Item>
+          <Form.Item
+            name="password"
+            rules={[{ required: true, message: '请输入密码' }]}
+          >
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="密码"
+              iconRender={(visible) =>
+                visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />
+              }
+              autoComplete="current-password"
             />
+          </Form.Item>
+          <Form.Item>
             <Button
-              fullWidth
-              type="submit"
-              variant="contained"
-              size="large"
-              className={styles.submitBtn}
-              disabled={isLoading}
-              startIcon={<LoginIcon />}
+              type="primary"
+              htmlType="submit"
+              loading={isLoading}
+              block
+              icon={<LoginOutlined />}
             >
-              {isLoading ? '登录中...' : '登录'}
+              登录
             </Button>
-          </form>
+          </Form.Item>
+        </Form>
 
-          <Box className={styles.footer}>
-            <Typography variant="body2">
-              还没有账户？{' '}
-              <Link to="/register" className={styles.link}>
-                立即注册
-              </Link>
-            </Typography>
-          </Box>
-        </CardContent>
+        <div className={styles.footer}>
+          <span>还没有账户？</span>
+          <Link to="/register" className={styles.link}>
+            立即注册
+          </Link>
+        </div>
       </Card>
-    </Box>
+    </div>
   )
 }
 

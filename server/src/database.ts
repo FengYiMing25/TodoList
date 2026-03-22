@@ -86,10 +86,31 @@ export const initDatabase = async (): Promise<void> => {
       mime_type TEXT NOT NULL,
       size INTEGER NOT NULL,
       url TEXT NOT NULL,
-      todo_id TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (todo_id) REFERENCES todos(id) ON DELETE CASCADE
+      entity_type TEXT,
+      entity_id TEXT,
+      todo_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
+  `);
+
+  try {
+    const tableInfo = db.exec("PRAGMA table_info(attachments)");
+    if (tableInfo.length > 0) {
+      const columns = tableInfo[0].values.map((col) => col[1] as string);
+      
+      if (!columns.includes("entity_type")) {
+        db.run("ALTER TABLE attachments ADD COLUMN entity_type TEXT");
+      }
+      if (!columns.includes("entity_id")) {
+        db.run("ALTER TABLE attachments ADD COLUMN entity_id TEXT");
+      }
+    }
+  } catch {
+    console.log("Attachments table migration skipped");
+  }
+
+  db.run(`
+    CREATE INDEX IF NOT EXISTS idx_attachments_entity ON attachments(entity_type, entity_id)
   `);
 
   db.run(`
@@ -107,6 +128,25 @@ export const initDatabase = async (): Promise<void> => {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS wardrobe (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      category TEXT NOT NULL,
+      price REAL NOT NULL,
+      purchase_date TEXT NOT NULL,
+      image_url TEXT,
+      status TEXT DEFAULT 'in_use',
+      discard_date TEXT,
+      discard_reason TEXT,
+      description TEXT,
+      user_id TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
   saveDatabase();
   console.log("Database initialized successfully");
 };
@@ -117,10 +157,14 @@ export const saveDatabase = (): void => {
   fs.writeFileSync(dbPath, buffer);
 };
 
+const normalizeParams = (params: unknown[]): unknown[] => {
+  return params.map(p => (p === undefined ? null : p));
+};
+
 export default {
   run: (sql: string, params: unknown[] = []): void => {
     try {
-      db.run(sql, params);
+      db.run(sql, normalizeParams(params));
       saveDatabase();
     } catch (error) {
       console.error('Database run error:', error);
@@ -131,7 +175,7 @@ export default {
   },
   get: <T>(sql: string, params: unknown[] = []): T | undefined => {
     try {
-      const result = db.exec(sql, params);
+      const result = db.exec(sql, normalizeParams(params));
       if (result.length === 0 || result[0].values.length === 0) return undefined;
       const columns = result[0].columns;
       const values = result[0].values[0];
@@ -149,7 +193,7 @@ export default {
   },
   all: <T>(sql: string, params: unknown[] = []): T[] => {
     try {
-      const result = db.exec(sql, params);
+      const result = db.exec(sql, normalizeParams(params));
       if (result.length === 0) return [];
       const columns = result[0].columns;
       return result[0].values.map((values: unknown[]) => {

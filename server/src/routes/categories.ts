@@ -1,12 +1,15 @@
-import { Router } from "express";
-import { getCategories, createCategory, updateCategory, deleteCategory } from "../controllers";
-import { authMiddleware } from "../middlewares";
+import { FastifyInstance } from "fastify";
+import {
+  getCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+} from "../controllers/categoryController";
+import { authMiddleware } from "../middlewares/auth";
 
-const router = Router();
-
-router.get("/", authMiddleware, getCategories);
-router.post("/", authMiddleware, createCategory);
-router.put("/:id", authMiddleware, updateCategory);
-router.delete("/:id", authMiddleware, deleteCategory);
-
-export default router;
+export default async function categoryRoutes(fastify: FastifyInstance) {
+  fastify.get("/", { preHandler: authMiddleware }, getCategories);
+  fastify.post("/", { preHandler: authMiddleware }, createCategory);
+  fastify.put("/:id", { preHandler: authMiddleware }, updateCategory);
+  fastify.delete("/:id", { preHandler: authMiddleware }, deleteCategory);
+}

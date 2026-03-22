@@ -1,11 +1,9 @@
-import { Router } from "express";
-import { getTags, createTag, deleteTag } from "../controllers";
-import { authMiddleware } from "../middlewares";
+import { FastifyInstance } from "fastify";
+import { getTags, createTag, deleteTag } from "../controllers/tagController";
+import { authMiddleware } from "../middlewares/auth";
 
-const router = Router();
-
-router.get("/", authMiddleware, getTags);
-router.post("/", authMiddleware, createTag);
-router.delete("/:id", authMiddleware, deleteTag);
-
-export default router;
+export default async function tagRoutes(fastify: FastifyInstance) {
+  fastify.get("/", { preHandler: authMiddleware }, getTags);
+  fastify.post("/", { preHandler: authMiddleware }, createTag);
+  fastify.delete("/:id", { preHandler: authMiddleware }, deleteTag);
+}

@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from '@stores/authStore'
 import Layout from '@components/Layout'
+import GlobalLoading from '@components/GlobalLoading'
 import Login from '@pages/Login'
 import Register from '@pages/Register'
 import Dashboard from '@pages/Dashboard'
@@ -10,35 +11,34 @@ import Categories from '@pages/Categories'
 import Settings from '@pages/Settings'
 import NotFound from '@pages/NotFound'
 import AccountBook from '@pages/AccountBook'
+import Wardrobe from '@pages/Wardrobe'
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuthStore()
+  const { isAuthenticated, isLoading, isInitialized } = useAuthStore()
   
-  if (isLoading) {
-    return null
+  if (!isInitialized || isLoading) {
+    return <GlobalLoading />
   }
   
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />
 }
 
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuthStore()
+  const { isAuthenticated, isLoading, isInitialized } = useAuthStore()
   
-  if (isLoading) {
-    return null
+  if (!isInitialized || isLoading) {
+    return <GlobalLoading />
   }
   
   return !isAuthenticated ? <>{children}</> : <Navigate to="/" replace />
 }
 
 function App() {
-  const { checkAuth, token } = useAuthStore()
+  const { checkAuth } = useAuthStore()
 
   useEffect(() => {
-    if (token) {
-      checkAuth()
-    }
-  }, [])
+    checkAuth()
+  }, [checkAuth])
 
   return (
     <Routes>
@@ -69,6 +69,7 @@ function App() {
         <Route index element={<Dashboard />} />
         <Route path="todos" element={<TodoList />} />
         <Route path="accounts" element={<AccountBook />} />
+        <Route path="wardrobe" element={<Wardrobe />} />
         <Route path="categories" element={<Categories />} />
         <Route path="settings" element={<Settings />} />
       </Route>

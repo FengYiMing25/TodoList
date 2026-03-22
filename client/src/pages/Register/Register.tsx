@@ -1,144 +1,144 @@
-import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import {
-  Box,
   Card,
-  CardContent,
-  TextField,
+  Form,
+  Input,
   Button,
-  Typography,
-  Alert,
-  InputAdornment,
-  IconButton,
-} from '@mui/material'
-import { Visibility, VisibilityOff, PersonAdd as PersonAddIcon } from '@mui/icons-material'
+} from 'antd'
+import {
+  UserOutlined,
+  LockOutlined,
+  MailOutlined,
+  EyeTwoTone,
+  EyeInvisibleOutlined,
+  UserAddOutlined,
+} from '@ant-design/icons'
 import { useAuthStore } from '@stores/authStore'
+import { useMessage } from '@hooks/useMessage'
 import styles from './Register.module.less'
 
 const Register: React.FC = () => {
   const navigate = useNavigate()
   const { register, isLoading } = useAuthStore()
-  const [username, setUsername] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState('')
+  const [form] = Form.useForm()
+  const message = useMessage()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-
-    if (!username.trim() || !email.trim() || !password.trim()) {
-      setError('请填写所有必填项')
-      return
-    }
-
-    if (password !== confirmPassword) {
-      setError('两次输入的密码不一致')
-      return
-    }
-
-    if (password.length < 6) {
-      setError('密码长度至少为6位')
-      return
-    }
-
+  const handleSubmit = async (values: {
+    username: string
+    email: string
+    password: string
+    confirmPassword: string
+  }) => {
     try {
-      await register(username.trim(), email.trim(), password)
+      await register(
+        values.username.trim(),
+        values.email.trim(),
+        values.password
+      )
+      message.success('注册成功')
       navigate('/')
     } catch (err) {
-      setError(err instanceof Error ? err.message : '注册失败')
+      message.error(err instanceof Error ? err.message : '注册失败')
     }
   }
 
   return (
-    <Box className={styles.container}>
+    <div className={styles.container}>
       <Card className={styles.card}>
-        <CardContent className={styles.cardContent}>
-          <Typography variant="h4" component="h1" className={styles.title}>
-            创建账户
-          </Typography>
-          <Typography variant="body2" color="text.secondary" className={styles.subtitle}>
-            注册一个新的账户
-          </Typography>
+        <div className={styles.header}>
+          <h1 className={styles.title}>创建账户</h1>
+          <p className={styles.subtitle}>注册一个新的账户</p>
+        </div>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-
-          <form onSubmit={handleSubmit}>
-            <TextField
-              fullWidth
-              label="用户名"
-              variant="outlined"
-              margin="normal"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoFocus
+        <Form
+          form={form}
+          onFinish={handleSubmit}
+          layout="vertical"
+          size="large"
+        >
+          <Form.Item
+            name="username"
+            rules={[
+              { required: true, message: '请输入用户名' },
+              { min: 3, message: '用户名至少3个字符' },
+            ]}
+          >
+            <Input
+              prefix={<UserOutlined />}
+              placeholder="用户名"
             />
-            <TextField
-              fullWidth
-              label="邮箱"
-              type="email"
-              variant="outlined"
-              margin="normal"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+          </Form.Item>
+          <Form.Item
+            name="email"
+            rules={[
+              { required: true, message: '请输入邮箱' },
+              { type: 'email', message: '请输入有效的邮箱地址' },
+            ]}
+          >
+            <Input
+              prefix={<MailOutlined />}
+              placeholder="邮箱"
             />
-            <TextField
-              fullWidth
-              label="密码"
-              type={showPassword ? 'text' : 'password'}
-              variant="outlined"
-              margin="normal"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
+          </Form.Item>
+          <Form.Item
+            name="password"
+            rules={[
+              { required: true, message: '请输入密码' },
+              { min: 6, message: '密码至少6个字符' },
+            ]}
+          >
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="密码"
+              iconRender={(visible) =>
+                visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />
+              }
             />
-            <TextField
-              fullWidth
-              label="确认密码"
-              type={showPassword ? 'text' : 'password'}
-              variant="outlined"
-              margin="normal"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+          </Form.Item>
+          <Form.Item
+            name="confirmPassword"
+            dependencies={['password']}
+            rules={[
+              { required: true, message: '请确认密码' },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue('password') === value) {
+                    return Promise.resolve()
+                  }
+                  return Promise.reject(new Error('两次输入的密码不一致'))
+                },
+              }),
+            ]}
+          >
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="确认密码"
+              iconRender={(visible) =>
+                visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />
+              }
             />
+          </Form.Item>
+          <Form.Item>
             <Button
-              fullWidth
-              type="submit"
-              variant="contained"
-              size="large"
-              className={styles.submitBtn}
-              disabled={isLoading}
-              startIcon={<PersonAddIcon />}
+              type="primary"
+              htmlType="submit"
+              loading={isLoading}
+              block
+              icon={<UserAddOutlined />}
             >
-              {isLoading ? '注册中...' : '注册'}
+              注册
             </Button>
-          </form>
+          </Form.Item>
+        </Form>
 
-          <Box className={styles.footer}>
-            <Typography variant="body2">
-              已有账户？{' '}
-              <Link to="/login" className={styles.link}>
-                立即登录
-              </Link>
-            </Typography>
-          </Box>
-        </CardContent>
+        <div className={styles.footer}>
+          <span>已有账户？</span>
+          <Link to="/login" className={styles.link}>
+            立即登录
+          </Link>
+        </div>
       </Card>
-    </Box>
+    </div>
   )
 }
 

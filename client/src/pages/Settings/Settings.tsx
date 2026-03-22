@@ -1,27 +1,29 @@
-import { useState } from 'react'
+import { useEffect } from 'react'
 import {
-  Box,
   Card,
-  CardContent,
-  Typography,
-  Grid,
-  TextField,
+  Row,
+  Col,
+  Form,
+  Input,
   Button,
   Divider,
   Switch,
-  FormControlLabel,
   Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Alert,
-  Snackbar,
   Avatar,
-  IconButton,
-} from '@mui/material'
-import { PhotoCamera as CameraIcon, Save as SaveIcon } from '@mui/icons-material'
+  Upload,
+  Space,
+} from 'antd'
+import {
+  SaveOutlined,
+  CameraOutlined,
+  UserOutlined,
+  LoadingOutlined,
+} from '@ant-design/icons'
+import type { UploadProps } from 'antd'
 import { useAuthStore } from '@stores/authStore'
 import { useSettingsStore } from '@stores/settingsStore'
+import { useMessage } from '@hooks/useMessage'
+import { useImageUpload } from '@hooks'
 import styles from './Settings.module.less'
 
 const themeColors = [
@@ -49,259 +51,266 @@ const Settings: React.FC = () => {
     resetSettings,
   } = useSettingsStore()
 
-  const [profileForm, setProfileForm] = useState({
-    username: user?.username || '',
-    email: user?.email || '',
-  })
-  const [passwordForm, setPasswordForm] = useState({
-    oldPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  })
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' })
+  const [profileForm] = Form.useForm()
+  const [passwordForm] = Form.useForm()
+  const message = useMessage()
 
-  const handleProfileSubmit = async () => {
+  const {
+    imageUrl: avatarUrl,
+    localPreview,
+    uploading,
+    selectFile,
+    setImageUrl,
+    uploadPendingFile,
+    reset: resetImageUpload,
+  } = useImageUpload({
+    onSuccess: (url) => {
+      updateProfile({ avatar: url })
+      message.success('头像更新成功')
+    },
+    onError: () => {
+      message.error('头像上传失败')
+    },
+  })
+
+  useEffect(() => {
+    if (user?.avatar) {
+      setImageUrl(user.avatar)
+    }
+  }, [user?.avatar, setImageUrl])
+
+  const handleProfileSubmit = async (values: { username: string; email: string }) => {
     try {
-      await updateProfile(profileForm)
-      setSnackbar({ open: true, message: '个人资料更新成功', severity: 'success' })
+      await updateProfile(values)
+      message.success('个人资料更新成功')
     } catch (error) {
-      setSnackbar({ open: true, message: '更新失败', severity: 'error' })
+      message.error('更新失败')
     }
   }
 
-  const handlePasswordSubmit = async () => {
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setSnackbar({ open: true, message: '两次密码输入不一致', severity: 'error' })
+  const handlePasswordSubmit = async (values: {
+    oldPassword: string
+    newPassword: string
+    confirmPassword: string
+  }) => {
+    if (values.newPassword !== values.confirmPassword) {
+      message.error('两次密码输入不一致')
       return
     }
     try {
-      setSnackbar({ open: true, message: '密码修改成功', severity: 'success' })
-      setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' })
+      message.success('密码修改成功')
+      passwordForm.resetFields()
     } catch (error) {
-      setSnackbar({ open: true, message: '密码修改失败', severity: 'error' })
+      message.error('密码修改失败')
     }
   }
 
   const handleResetSettings = () => {
     resetSettings()
-    setSnackbar({ open: true, message: '设置已重置', severity: 'success' })
+    message.success('设置已重置')
   }
 
+  const handleAvatarSelect = async (file: File) => {
+    const success = selectFile(file)
+    if (success) {
+      await uploadPendingFile()
+    }
+  }
+
+  const uploadProps: UploadProps = {
+    showUploadList: false,
+    beforeUpload: (file) => {
+      handleAvatarSelect(file)
+      return false
+    },
+  }
+
+  const displayAvatar = localPreview || avatarUrl || user?.avatar
+
   return (
-    <Box className={styles.container}>
-      <Typography variant="h4" className={styles.pageTitle}>
-        系统设置
-      </Typography>
-
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <Card className={styles.card}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                个人资料
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              <Box className={styles.avatarSection}>
-                <Avatar
-                  src={user?.avatar}
-                  sx={{ width: 80, height: 80, bgcolor: primaryColor }}
-                >
-                  {user?.username?.charAt(0).toUpperCase()}
-                </Avatar>
-                <IconButton component="label" className={styles.avatarUpload}>
-                  <CameraIcon />
-                  <input type="file" hidden accept="image/*" />
-                </IconButton>
-              </Box>
-              <TextField
-                fullWidth
-                label="用户名"
-                value={profileForm.username}
-                onChange={(e) => setProfileForm({ ...profileForm, username: e.target.value })}
-                margin="normal"
-              />
-              <TextField
-                fullWidth
-                label="邮箱"
-                type="email"
-                value={profileForm.email}
-                onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                margin="normal"
-              />
-              <Button
-                variant="contained"
-                startIcon={<SaveIcon />}
-                onClick={handleProfileSubmit}
-                sx={{ mt: 2 }}
-              >
-                保存资料
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Card className={styles.card}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                修改密码
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              <TextField
-                fullWidth
-                label="当前密码"
-                type="password"
-                value={passwordForm.oldPassword}
-                onChange={(e) => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
-                margin="normal"
-              />
-              <TextField
-                fullWidth
-                label="新密码"
-                type="password"
-                value={passwordForm.newPassword}
-                onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                margin="normal"
-              />
-              <TextField
-                fullWidth
-                label="确认新密码"
-                type="password"
-                value={passwordForm.confirmPassword}
-                onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                margin="normal"
-              />
-              <Button
-                variant="contained"
-                startIcon={<SaveIcon />}
-                onClick={handlePasswordSubmit}
-                sx={{ mt: 2 }}
-              >
-                修改密码
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12}>
-          <Card className={styles.card}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                外观设置
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6} md={4}>
-                  <FormControl fullWidth>
-                    <InputLabel>主题模式</InputLabel>
-                    <Select
-                      value={themeMode}
-                      label="主题模式"
-                      onChange={(e) => setThemeMode(e.target.value as 'light' | 'dark' | 'system')}
-                    >
-                      <MenuItem value="light">浅色模式</MenuItem>
-                      <MenuItem value="dark">深色模式</MenuItem>
-                      <MenuItem value="system">跟随系统</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <FormControl fullWidth>
-                    <InputLabel>主题颜色</InputLabel>
-                    <Select
-                      value={primaryColor}
-                      label="主题颜色"
-                      onChange={(e) => setPrimaryColor(e.target.value)}
-                    >
-                      {themeColors.map((color) => (
-                        <MenuItem key={color.value} value={color.value}>
-                          <Box className={styles.colorOption}>
-                            <Box
-                              className={styles.colorDot}
-                              style={{ backgroundColor: color.value }}
-                            />
-                            {color.name}
-                          </Box>
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                  <FormControl fullWidth>
-                    <InputLabel>字体大小</InputLabel>
-                    <Select
-                      value={fontSize}
-                      label="字体大小"
-                      onChange={(e) => setFontSize(e.target.value as number)}
-                    >
-                      <MenuItem value={12}>小 (12px)</MenuItem>
-                      <MenuItem value={14}>中 (14px)</MenuItem>
-                      <MenuItem value={16}>大 (16px)</MenuItem>
-                      <MenuItem value={18}>超大 (18px)</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12}>
-          <Card className={styles.card}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                待办事项设置
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={showCompleted}
-                        onChange={(e) => setShowCompleted(e.target.checked)}
-                      />
-                    }
-                    label="显示已完成的待办事项"
+    <div className={styles.container}>
+      <Row gutter={[24, 24]}>
+        <Col xs={24} lg={12}>
+          <Card title="个人资料" className={styles.card}>
+            <div className={styles.avatarSection}>
+              <Upload {...uploadProps}>
+                <Space direction="vertical" align="center">
+                  <Avatar
+                    size={80}
+                    src={displayAvatar}
+                    style={{ backgroundColor: primaryColor, cursor: 'pointer' }}
+                    icon={uploading ? <LoadingOutlined /> : (!displayAvatar && <UserOutlined />)}
                   />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <FormControl sx={{ minWidth: 200 }}>
-                    <InputLabel>默认优先级</InputLabel>
-                    <Select
-                      value={defaultPriority}
-                      label="默认优先级"
-                      onChange={(e) => setDefaultPriority(e.target.value as 'low' | 'medium' | 'high')}
-                    >
-                      <MenuItem value="low">低</MenuItem>
-                      <MenuItem value="medium">中</MenuItem>
-                      <MenuItem value="high">高</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-              </Grid>
-              <Box sx={{ mt: 3 }}>
-                <Button variant="outlined" color="error" onClick={handleResetSettings}>
-                  重置所有设置
+                  <Button icon={<CameraOutlined />} size="small" loading={uploading}>
+                    {uploading ? '上传中...' : '更换头像'}
+                  </Button>
+                </Space>
+              </Upload>
+            </div>
+            <Form
+              form={profileForm}
+              layout="vertical"
+              initialValues={{
+                username: user?.username || '',
+                email: user?.email || '',
+              }}
+              onFinish={handleProfileSubmit}
+            >
+              <Form.Item name="username" label="用户名">
+                <Input placeholder="请输入用户名" />
+              </Form.Item>
+              <Form.Item name="email" label="邮箱">
+                <Input type="email" placeholder="请输入邮箱" />
+              </Form.Item>
+              <Form.Item>
+                <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
+                  保存资料
                 </Button>
-              </Box>
-            </CardContent>
+              </Form.Item>
+            </Form>
           </Card>
-        </Grid>
-      </Grid>
+        </Col>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert severity={snackbar.severity} onClose={() => setSnackbar({ ...snackbar, open: false })}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Box>
+        <Col xs={24} lg={12}>
+          <Card title="修改密码" className={styles.card}>
+            <Form form={passwordForm} layout="vertical" onFinish={handlePasswordSubmit}>
+              <Form.Item
+                name="oldPassword"
+                label="当前密码"
+                rules={[{ required: true, message: '请输入当前密码' }]}
+              >
+                <Input.Password placeholder="请输入当前密码" />
+              </Form.Item>
+              <Form.Item
+                name="newPassword"
+                label="新密码"
+                rules={[
+                  { required: true, message: '请输入新密码' },
+                  { min: 6, message: '密码至少6个字符' },
+                ]}
+              >
+                <Input.Password placeholder="请输入新密码" />
+              </Form.Item>
+              <Form.Item
+                name="confirmPassword"
+                label="确认新密码"
+                dependencies={['newPassword']}
+                rules={[
+                  { required: true, message: '请确认新密码' },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      if (!value || getFieldValue('newPassword') === value) {
+                        return Promise.resolve()
+                      }
+                      return Promise.reject(new Error('两次输入的密码不一致'))
+                    },
+                  }),
+                ]}
+              >
+                <Input.Password placeholder="请确认新密码" />
+              </Form.Item>
+              <Form.Item>
+                <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
+                  修改密码
+                </Button>
+              </Form.Item>
+            </Form>
+          </Card>
+        </Col>
+
+        <Col xs={24}>
+          <Card title="外观设置" className={styles.card}>
+            <Row gutter={[24, 16]}>
+              <Col xs={24} sm={12} lg={8}>
+                <div className={styles.settingItem}>
+                  <span className={styles.label}>主题模式</span>
+                  <Select
+                    value={themeMode}
+                    onChange={setThemeMode}
+                    style={{ width: 150 }}
+                    options={[
+                      { label: '浅色模式', value: 'light' },
+                      { label: '深色模式', value: 'dark' },
+                      { label: '跟随系统', value: 'system' },
+                    ]}
+                  />
+                </div>
+              </Col>
+              <Col xs={24} sm={12} lg={8}>
+                <div className={styles.settingItem}>
+                  <span className={styles.label}>主题颜色</span>
+                  <Select
+                    value={primaryColor}
+                    onChange={setPrimaryColor}
+                    style={{ width: 150 }}
+                    options={themeColors.map((c) => ({
+                      label: (
+                        <Space>
+                          <div
+                            className={styles.colorDot}
+                            style={{ backgroundColor: c.value }}
+                          />
+                          {c.name}
+                        </Space>
+                      ),
+                      value: c.value,
+                    }))}
+                  />
+                </div>
+              </Col>
+              <Col xs={24} sm={12} lg={8}>
+                <div className={styles.settingItem}>
+                  <span className={styles.label}>字体大小</span>
+                  <Select
+                    value={fontSize}
+                    onChange={setFontSize}
+                    style={{ width: 150 }}
+                    options={[
+                      { label: '小 (12px)', value: 12 },
+                      { label: '中 (14px)', value: 14 },
+                      { label: '大 (16px)', value: 16 },
+                      { label: '超大 (18px)', value: 18 },
+                    ]}
+                  />
+                </div>
+              </Col>
+            </Row>
+          </Card>
+        </Col>
+
+        <Col xs={24}>
+          <Card title="待办事项设置" className={styles.card}>
+            <Row gutter={[24, 16]}>
+              <Col xs={24} sm={12}>
+                <div className={styles.settingItem}>
+                  <span className={styles.label}>显示已完成的待办事项</span>
+                  <Switch checked={showCompleted} onChange={setShowCompleted} />
+                </div>
+              </Col>
+              <Col xs={24} sm={12}>
+                <div className={styles.settingItem}>
+                  <span className={styles.label}>默认优先级</span>
+                  <Select
+                    value={defaultPriority}
+                    onChange={setDefaultPriority}
+                    style={{ width: 150 }}
+                    options={[
+                      { label: '低', value: 'low' },
+                      { label: '中', value: 'medium' },
+                      { label: '高', value: 'high' },
+                    ]}
+                  />
+                </div>
+              </Col>
+            </Row>
+            <Divider />
+            <Button danger onClick={handleResetSettings}>
+              重置所有设置
+            </Button>
+          </Card>
+        </Col>
+      </Row>
+    </div>
   )
 }
 

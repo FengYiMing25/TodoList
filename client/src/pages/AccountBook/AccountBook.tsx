@@ -1,48 +1,36 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import {
-  Box,
   Card,
-  CardContent,
-  Typography,
   Button,
-  IconButton,
-  Chip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
-  TextField,
-  FormControl,
-  InputLabel,
+  Tag,
+  Modal,
+  Form,
+  Input,
   Select,
-  MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Fab,
-  Menu,
-  ListItemIcon,
-  ListItemText,
-  Paper,
-  Grid,
-} from '@mui/material'
+  DatePicker,
+  InputNumber,
+  Popconfirm,
+  Row,
+  Col,
+  Statistic,
+  Space,
+  Tooltip,
+} from 'antd'
 import {
-  Add as AddIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  FilterList as FilterIcon,
-  MoreVert as MoreIcon,
-  TrendingUp as IncomeIcon,
-  TrendingDown as ExpenseIcon,
-  AccountBalance as BalanceIcon,
-} from '@mui/icons-material'
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+  WalletOutlined,
+} from '@ant-design/icons'
+import { ProTable } from '@ant-design/pro-components'
+import type { ActionType, ProColumns } from '@ant-design/pro-components'
 import { useAccountStore } from '@stores/accountStore'
+import { useMessage } from '@hooks/useMessage'
 import type { Account, CreateAccountRequest, UpdateAccountRequest, AccountType } from '@types'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '@types'
+import dayjs from 'dayjs'
 import styles from './AccountBook.module.less'
 
 const AccountBook: React.FC = () => {
@@ -58,21 +46,12 @@ const AccountBook: React.FC = () => {
     deleteAccount,
     setQueryParams,
   } = useAccountStore()
+  const actionRef = useRef<ActionType>()
+  const [form] = Form.useForm()
+  const message = useMessage()
 
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
-  const [filterOpen, setFilterOpen] = useState(false)
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
-  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
-
-  const [formData, setFormData] = useState<CreateAccountRequest>({
-    type: 'expense',
-    category: '',
-    amount: 0,
-    description: '',
-    date: new Date().toISOString().split('T')[0],
-  })
 
   useEffect(() => {
     fetchAccounts()
@@ -85,21 +64,19 @@ const AccountBook: React.FC = () => {
   const handleOpenDialog = (account?: Account) => {
     if (account) {
       setEditingAccount(account)
-      setFormData({
+      form.setFieldsValue({
         type: account.type,
         category: account.category,
         amount: account.amount,
-        description: account.description || '',
-        date: account.date.split('T')[0],
+        description: account.description,
+        date: dayjs(account.date),
       })
     } else {
       setEditingAccount(null)
-      setFormData({
+      form.resetFields()
+      form.setFieldsValue({
         type: 'expense',
-        category: '',
-        amount: 0,
-        description: '',
-        date: new Date().toISOString().split('T')[0],
+        date: dayjs(),
       })
     }
     setDialogOpen(true)
@@ -108,354 +85,288 @@ const AccountBook: React.FC = () => {
   const handleCloseDialog = () => {
     setDialogOpen(false)
     setEditingAccount(null)
+    form.resetFields()
   }
 
   const handleSubmit = async () => {
-    if (!formData.category || formData.amount <= 0) return
-
     try {
+      const values = await form.validateFields()
+      const data = {
+        ...values,
+        date: values.date.format('YYYY-MM-DD'),
+      }
+
       if (editingAccount) {
-        await updateAccount(editingAccount.id, formData as UpdateAccountRequest)
+        await updateAccount(editingAccount.id, data as UpdateAccountRequest)
+        message.success('更新成功')
       } else {
-        await createAccount(formData)
+        await createAccount(data as CreateAccountRequest)
+        message.success('创建成功')
       }
       handleCloseDialog()
-      fetchAccounts()
+      actionRef.current?.reload()
     } catch (error) {
-      console.error('Failed to save account:', error)
+      message.error('操作失败')
     }
   }
 
-  const handleDelete = () => {
-    setDeleteDialogOpen(true)
-  }
-
-  const handleConfirmDelete = async () => {
-    if (selectedAccountId) {
-      await deleteAccount(selectedAccountId)
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteAccount(id)
+      message.success('删除成功')
+      actionRef.current?.reload()
+    } catch (error) {
+      message.error('删除失败')
     }
-    setDeleteDialogOpen(false)
-    setAnchorEl(null)
-    setSelectedAccountId(null)
-  }
-
-  const handleCancelDelete = () => {
-    setDeleteDialogOpen(false)
-  }
-
-  const handlePageChange = (_: unknown, page: number) => {
-    setQueryParams({ page: page + 1 })
-    fetchAccounts({ ...queryParams, page: page + 1 })
-  }
-
-  const handleRowsPerPageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const limit = parseInt(e.target.value, 10)
-    setQueryParams({ limit, page: 1 })
-    fetchAccounts({ ...queryParams, limit, page: 1 })
-  }
-
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, accountId: string) => {
-    setAnchorEl(event.currentTarget)
-    setSelectedAccountId(accountId)
-  }
-
-  const handleMenuClose = () => {
-    setAnchorEl(null)
-    setSelectedAccountId(null)
   }
 
   const formatAmount = (amount: number, type: AccountType) => {
     return type === 'income' ? `+${amount.toFixed(2)}` : `-${amount.toFixed(2)}`
   }
 
-  return (
-    <Box className={styles.container}>
-      <Box className={styles.header}>
-        <Typography variant="h4" className={styles.pageTitle}>
-          记账本
-        </Typography>
-        <Box className={styles.actions}>
-          <Button
-            variant="outlined"
-            startIcon={<FilterIcon />}
-            onClick={() => setFilterOpen(!filterOpen)}
+  const columns: ProColumns<Account>[] = [
+    {
+      title: '日期',
+      dataIndex: 'date',
+      width: 120,
+      valueType: 'date',
+      render: (_, record) => dayjs(record.date).format('YYYY-MM-DD'),
+    },
+    {
+      title: '类型',
+      dataIndex: 'type',
+      width: 100,
+      valueType: 'select',
+      valueEnum: {
+        income: { text: '收入', status: 'Success' },
+        expense: { text: '支出', status: 'Error' },
+      },
+      render: (_, record) => (
+        <Tag color={record.type === 'income' ? 'success' : 'error'}>
+          {record.type === 'income' ? '收入' : '支出'}
+        </Tag>
+      ),
+    },
+    {
+      title: '分类',
+      dataIndex: 'category',
+      width: 120,
+      render: (_, record) => <Tag>{record.category}</Tag>,
+    },
+    {
+      title: '金额',
+      dataIndex: 'amount',
+      width: 150,
+      search: false,
+      render: (_, record) => (
+        <span
+          style={{
+            color: record.type === 'income' ? '#52c41a' : '#ff4d4f',
+            fontWeight: 'bold',
+          }}
+        >
+          {formatAmount(record.amount, record.type)}
+        </span>
+      ),
+    },
+    {
+      title: '备注',
+      dataIndex: 'description',
+      ellipsis: true,
+      search: false,
+      render: (_, record) => record.description || '-',
+    },
+    {
+      title: '操作',
+      valueType: 'option',
+      width: 100,
+      fixed: 'right',
+      render: (_, record) => (
+        <Space size={0} className={styles.actionBar}>
+          <Tooltip title="编辑">
+            <Button
+              type="text"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleOpenDialog(record)}
+            />
+          </Tooltip>
+          <Popconfirm
+            title="确定要删除这条记录吗？"
+            onConfirm={() => handleDelete(record.id)}
+            okText="确定"
+            cancelText="取消"
           >
-            筛选
-          </Button>
-        </Box>
-      </Box>
+            <Tooltip title="删除">
+              <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+            </Tooltip>
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ]
 
-      <Grid container spacing={2} className={styles.summaryGrid}>
-        <Grid item xs={12} sm={4}>
-          <Paper className={styles.summaryCard}>
-            <Box className={styles.summaryContent}>
-              <IncomeIcon className={styles.incomeIcon} />
-              <Box>
-                <Typography variant="body2" color="textSecondary">
-                  收入
-                </Typography>
-                <Typography variant="h5" className={styles.incomeText}>
-                  ¥{summary.income.toFixed(2)}
-                </Typography>
-              </Box>
-            </Box>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <Paper className={styles.summaryCard}>
-            <Box className={styles.summaryContent}>
-              <ExpenseIcon className={styles.expenseIcon} />
-              <Box>
-                <Typography variant="body2" color="textSecondary">
-                  支出
-                </Typography>
-                <Typography variant="h5" className={styles.expenseText}>
-                  ¥{summary.expense.toFixed(2)}
-                </Typography>
-              </Box>
-            </Box>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <Paper className={styles.summaryCard}>
-            <Box className={styles.summaryContent}>
-              <BalanceIcon className={styles.balanceIcon} />
-              <Box>
-                <Typography variant="body2" color="textSecondary">
-                  结余
-                </Typography>
-                <Typography variant="h5" className={summary.balance >= 0 ? styles.incomeText : styles.expenseText}>
-                  ¥{summary.balance.toFixed(2)}
-                </Typography>
-              </Box>
-            </Box>
-          </Paper>
-        </Grid>
-      </Grid>
-
-      {filterOpen && (
-        <Card className={styles.filterCard}>
-          <CardContent>
-            <Box className={styles.filterRow}>
-              <FormControl size="small" sx={{ minWidth: 120 }}>
-                <InputLabel>类型</InputLabel>
-                <Select
-                  value={queryParams.type || ''}
-                  label="类型"
-                  onChange={(e) => setQueryParams({ type: e.target.value as AccountType || undefined })}
-                >
-                  <MenuItem value="">全部</MenuItem>
-                  <MenuItem value="income">收入</MenuItem>
-                  <MenuItem value="expense">支出</MenuItem>
-                </Select>
-              </FormControl>
-              <TextField
-                label="开始日期"
-                type="date"
-                size="small"
-                value={queryParams.startDate || ''}
-                onChange={(e) => setQueryParams({ startDate: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-              />
-              <TextField
-                label="结束日期"
-                type="date"
-                size="small"
-                value={queryParams.endDate || ''}
-                onChange={(e) => setQueryParams({ endDate: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-              />
-              <Button variant="contained" onClick={() => fetchAccounts()}>
-                搜索
-              </Button>
-            </Box>
-          </CardContent>
-        </Card>
-      )}
+  return (
+    <div className={styles.container}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Col xs={24} sm={8}>
+          <Card className={styles.summaryCard}>
+            <Statistic
+              title="收入"
+              value={summary.income}
+              precision={2}
+              valueStyle={{ color: '#52c41a' }}
+              prefix={<ArrowUpOutlined />}
+              suffix="元"
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card className={styles.summaryCard}>
+            <Statistic
+              title="支出"
+              value={summary.expense}
+              precision={2}
+              valueStyle={{ color: '#ff4d4f' }}
+              prefix={<ArrowDownOutlined />}
+              suffix="元"
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card className={styles.summaryCard}>
+            <Statistic
+              title="结余"
+              value={summary.balance}
+              precision={2}
+              valueStyle={{ color: summary.balance >= 0 ? '#52c41a' : '#ff4d4f' }}
+              prefix={<WalletOutlined />}
+              suffix="元"
+            />
+          </Card>
+        </Col>
+      </Row>
 
       <Card>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>日期</TableCell>
-                <TableCell>类型</TableCell>
-                <TableCell>分类</TableCell>
-                <TableCell>金额</TableCell>
-                <TableCell>备注</TableCell>
-                <TableCell align="right">操作</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {accounts.map((account) => (
-                <TableRow key={account.id} hover>
-                  <TableCell>
-                    {new Date(account.date).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      size="small"
-                      label={account.type === 'income' ? '收入' : '支出'}
-                      color={account.type === 'income' ? 'success' : 'error'}
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      size="small"
-                      label={account.category}
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Typography
-                      className={account.type === 'income' ? styles.incomeText : styles.expenseText}
-                      fontWeight="bold"
-                    >
-                      {formatAmount(account.amount, account.type)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" color="textSecondary">
-                      {account.description || '-'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    <IconButton size="small" onClick={(e) => handleMenuOpen(e, account.id)}>
-                      <MoreIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          component="div"
-          count={total}
-          page={(queryParams.page || 1) - 1}
-          rowsPerPage={queryParams.limit || 10}
-          onPageChange={handlePageChange}
-          onRowsPerPageChange={handleRowsPerPageChange}
-          labelRowsPerPage="每页行数"
-          labelDisplayedRows={({ from, to, count }) => `${from}-${to} 共 ${count} 条`}
+        <ProTable<Account>
+          actionRef={actionRef}
+          columns={columns}
+          dataSource={accounts}
+          loading={isLoading}
+          rowKey="id"
+          scroll={{ x: 800 }}
+          search={{
+            labelWidth: 'auto',
+            defaultCollapsed: false,
+          }}
+          onSubmit={(params) => {
+            setQueryParams({
+              type: params.type,
+              startDate: params.date?.[0]?.format('YYYY-MM-DD'),
+              endDate: params.date?.[1]?.format('YYYY-MM-DD'),
+            })
+            fetchAccounts({
+              type: params.type,
+              startDate: params.date?.[0]?.format('YYYY-MM-DD'),
+              endDate: params.date?.[1]?.format('YYYY-MM-DD'),
+            })
+          }}
+          onReset={() => {
+            setQueryParams({})
+            fetchAccounts({})
+          }}
+          toolBarRender={() => [
+            <Button
+              key="add"
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => handleOpenDialog()}
+            >
+              新建记录
+            </Button>,
+          ]}
+          pagination={{
+            current: queryParams.page || 1,
+            pageSize: queryParams.limit || 10,
+            total: total,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total) => `共 ${total} 条`,
+            onChange: (page, pageSize) => {
+              setQueryParams({ page, limit: pageSize })
+              fetchAccounts({ ...queryParams, page, limit: pageSize })
+            },
+          }}
+          options={{
+            density: true,
+            fullScreen: true,
+            reload: () => fetchAccounts(queryParams),
+            setting: true,
+          }}
+          dateFormatter="string"
+          headerTitle="记账记录"
         />
       </Card>
 
-      <Fab
-        color="primary"
-        className={styles.fab}
-        onClick={() => handleOpenDialog()}
+      <Modal
+        title={editingAccount ? '编辑记录' : '新建记录'}
+        open={dialogOpen}
+        onCancel={handleCloseDialog}
+        onOk={handleSubmit}
+        destroyOnHidden
+        width={520}
       >
-        <AddIcon />
-      </Fab>
-
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingAccount ? '编辑记录' : '新建记录'}</DialogTitle>
-        <DialogContent>
-          <Box className={styles.form}>
-            <FormControl fullWidth margin="normal">
-              <InputLabel>类型</InputLabel>
-              <Select
-                value={formData.type}
-                label="类型"
-                onChange={(e) => {
-                  const newType = e.target.value as AccountType
-                  setFormData({ ...formData, type: newType, category: '' })
-                }}
-              >
-                <MenuItem value="income">收入</MenuItem>
-                <MenuItem value="expense">支出</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl fullWidth margin="normal">
-              <InputLabel>分类</InputLabel>
-              <Select
-                value={formData.category}
+        <Form form={form} layout="vertical" preserve={false}>
+          <Form.Item name="type" label="类型" initialValue="expense">
+            <Select
+              onChange={() => form.setFieldsValue({ category: undefined })}
+              options={[
+                { label: '收入', value: 'income' },
+                { label: '支出', value: 'expense' },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item
+            noStyle
+            shouldUpdate={(prevValues, currentValues) => prevValues.type !== currentValues.type}
+          >
+            {({ getFieldValue }) => (
+              <Form.Item
+                name="category"
                 label="分类"
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                rules={[{ required: true, message: '请选择分类' }]}
               >
-                {getCategories(formData.type).map((cat) => (
-                  <MenuItem key={cat} value={cat}>
-                    {cat}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              fullWidth
-              label="金额"
-              type="number"
-              value={formData.amount || ''}
-              onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
-              margin="normal"
-              inputProps={{ min: 0, step: '0.01' }}
+                <Select
+                  placeholder="请选择分类"
+                  options={getCategories(getFieldValue('type')).map((cat) => ({
+                    label: cat,
+                    value: cat,
+                  }))}
+                />
+              </Form.Item>
+            )}
+          </Form.Item>
+          <Form.Item
+            name="amount"
+            label="金额"
+            rules={[{ required: true, message: '请输入金额' }]}
+          >
+            <InputNumber
+              style={{ width: '100%' }}
+              min={0}
+              precision={2}
+              placeholder="请输入金额"
             />
-            <TextField
-              fullWidth
-              label="日期"
-              type="date"
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              margin="normal"
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              fullWidth
-              label="备注"
-              multiline
-              rows={2}
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              margin="normal"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>取消</Button>
-          <Button variant="contained" onClick={handleSubmit} disabled={isLoading}>
-            {editingAccount ? '保存' : '创建'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
-        <MenuItem
-          onClick={() => {
-            const account = accounts.find((a) => a.id === selectedAccountId)
-            if (account) handleOpenDialog(account)
-            handleMenuClose()
-          }}
-        >
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>编辑</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => {
-          handleMenuClose()
-          handleDelete()
-        }}>
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" color="error" />
-          </ListItemIcon>
-          <ListItemText sx={{ color: 'error.main' }}>删除</ListItemText>
-        </MenuItem>
-      </Menu>
-
-      <Dialog open={deleteDialogOpen} onClose={handleCancelDelete}>
-        <DialogTitle>确认删除</DialogTitle>
-        <DialogContent>
-          <Typography>确定要删除这条记账记录吗？此操作不可撤销。</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancelDelete}>取消</Button>
-          <Button variant="contained" color="error" onClick={handleConfirmDelete}>
-            删除
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+          </Form.Item>
+          <Form.Item name="date" label="日期" rules={[{ required: true, message: '请选择日期' }]}>
+            <DatePicker style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="description" label="备注">
+            <Input.TextArea rows={2} placeholder="请输入备注" />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
   )
 }
 

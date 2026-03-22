@@ -1,13 +1,19 @@
-import { Router } from "express";
-import { getTodos, getTodoById, createTodo, updateTodo, deleteTodo } from "../controllers";
-import { authMiddleware } from "../middlewares";
+import { FastifyInstance } from "fastify";
+import {
+  getTodos,
+  getTodoById,
+  createTodo,
+  updateTodo,
+  deleteTodo,
+  toggleTodoStatus,
+} from "../controllers/todoController";
+import { authMiddleware } from "../middlewares/auth";
 
-const router = Router();
-
-router.get("/", authMiddleware, getTodos);
-router.get("/:id", authMiddleware, getTodoById);
-router.post("/", authMiddleware, createTodo);
-router.put("/:id", authMiddleware, updateTodo);
-router.delete("/:id", authMiddleware, deleteTodo);
-
-export default router;
+export default async function todoRoutes(fastify: FastifyInstance) {
+  fastify.get("/", { preHandler: authMiddleware }, getTodos);
+  fastify.get("/:id", { preHandler: authMiddleware }, getTodoById);
+  fastify.post("/", { preHandler: authMiddleware }, createTodo);
+  fastify.put("/:id", { preHandler: authMiddleware }, updateTodo);
+  fastify.delete("/:id", { preHandler: authMiddleware }, deleteTodo);
+  fastify.patch("/:id/toggle", { preHandler: authMiddleware }, toggleTodoStatus);
+}
