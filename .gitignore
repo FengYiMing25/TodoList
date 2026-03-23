@@ -36,14 +36,6 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
-data.db
-
-# Uploads
-uploads/
 
 # Logs
 logs/
