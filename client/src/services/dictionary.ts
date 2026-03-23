@@ -31,6 +31,9 @@ export const dictionaryApi = {
   updateDictionary: (id: string, data: UpdateDictionaryRequest): Promise<Dictionary> => api.put(`/dictionaries/${id}`, data),
 
   deleteDictionary: (id: string): Promise<void> => api.delete(`/dictionaries/${id}`),
+
+  initDefaultDictionaries: (type?: DictionaryType): Promise<{ addedCount: number }> => 
+    api.post('/dictionaries/init-default', { type }),
 }
 
 export const dictionaryTypeApi = {

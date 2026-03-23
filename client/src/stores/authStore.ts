@@ -36,6 +36,7 @@ export const useAuthStore = create<AuthState>()(
             token: response.token,
             isAuthenticated: true,
             isLoading: false,
+            isInitialized: true,
           });
         } catch (error) {
           set({ isLoading: false });
@@ -52,6 +53,7 @@ export const useAuthStore = create<AuthState>()(
             token: response.token,
             isAuthenticated: true,
             isLoading: false,
+            isInitialized: true,
           });
         } catch (error) {
           set({ isLoading: false });

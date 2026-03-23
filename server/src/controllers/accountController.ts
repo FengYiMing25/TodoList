@@ -36,9 +36,10 @@ const formatAccount = (a: AccountRow): Account => ({
 });
 
 export const getAccounts = async (
-  request: FastifyRequest<{ Querystring: AccountQueryParams }>,
+  request: FastifyRequest,
   reply: FastifyReply
 ) => {
+  const query = request.query as AccountQueryParams;
   const {
     page = 1,
     limit = 10,
@@ -48,7 +49,7 @@ export const getAccounts = async (
     endDate,
     sortBy = "date",
     sortOrder = "desc",
-  } = request.query;
+  } = query;
 
   const sortByMap: Record<string, string> = {
     date: "date",
@@ -110,10 +111,10 @@ export const getAccounts = async (
 };
 
 export const getAccountById = async (
-  request: FastifyRequest<{ Params: { id: string } }>,
+  request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const { id } = request.params;
+  const { id } = request.params as { id: string };
 
   const account = db.get<AccountRow>(
     `SELECT * FROM accounts WHERE id = ? AND user_id = ?`,
@@ -131,10 +132,11 @@ export const getAccountById = async (
 };
 
 export const createAccount = async (
-  request: FastifyRequest<{ Body: CreateAccountRequest }>,
+  request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const { type, category, amount, description, date } = request.body;
+  const body = request.body as CreateAccountRequest;
+  const { type, category, amount, description, date } = body;
 
   if (!type || !category || !amount || !date) {
     return reply.code(400).send({ success: false, message: "类型、分类、金额和日期不能为空" });
@@ -160,11 +162,12 @@ export const createAccount = async (
 };
 
 export const updateAccount = async (
-  request: FastifyRequest<{ Params: { id: string }; Body: UpdateAccountRequest }>,
+  request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const { id } = request.params;
-  const { type, category, amount, description, date } = request.body;
+  const { id } = request.params as { id: string };
+  const body = request.body as UpdateAccountRequest;
+  const { type, category, amount, description, date } = body;
 
   const existingAccount = db.get<AccountRow>(
     "SELECT * FROM accounts WHERE id = ? AND user_id = ?",
@@ -193,10 +196,10 @@ export const updateAccount = async (
 };
 
 export const deleteAccount = async (
-  request: FastifyRequest<{ Params: { id: string } }>,
+  request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const { id } = request.params;
+  const { id } = request.params as { id: string };
 
   const account = db.get<AccountRow>(
     "SELECT * FROM accounts WHERE id = ? AND user_id = ?",
@@ -213,10 +216,11 @@ export const deleteAccount = async (
 };
 
 export const getStatistics = async (
-  request: FastifyRequest<{ Querystring: { startDate?: string; endDate?: string } }>,
+  request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const { startDate, endDate } = request.query;
+  const query = request.query as { startDate?: string; endDate?: string };
+  const { startDate, endDate } = query;
 
   let dateFilter = "";
   const params: unknown[] = [request.userId];

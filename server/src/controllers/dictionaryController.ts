@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { v4 as uuidv4 } from "uuid";
 import db from "../database";
+import { initializeDefaultDictionariesForType, DEFAULT_DICTIONARY_TYPES } from "../utils/initDefaultData";
 import type {
   Dictionary,
   CreateDictionaryRequest,
@@ -33,10 +34,11 @@ const formatDictionary = (dict: DictionaryRow): Dictionary => ({
 });
 
 export const getDictionaries = async (
-  request: FastifyRequest<{ Querystring: { type?: DictionaryType } }>,
+  request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const { type } = request.query;
+  const query = request.query as { type?: DictionaryType };
+  const { type } = query;
 
   let sql = "SELECT * FROM dictionaries WHERE user_id = ?";
   const params: unknown[] = [request.userId];
@@ -57,10 +59,10 @@ export const getDictionaries = async (
 };
 
 export const getDictionaryById = async (
-  request: FastifyRequest<{ Params: { id: string } }>,
+  request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const { id } = request.params;
+  const { id } = request.params as { id: string };
 
   const dictionary = db.get<DictionaryRow>(
     "SELECT * FROM dictionaries WHERE id = ? AND user_id = ?",
@@ -78,10 +80,11 @@ export const getDictionaryById = async (
 };
 
 export const createDictionary = async (
-  request: FastifyRequest<{ Body: CreateDictionaryRequest }>,
+  request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const { type, name, color, icon, sortOrder } = request.body;
+  const body = request.body as CreateDictionaryRequest;
+  const { type, name, color, icon, sortOrder } = body;
 
   if (!type || !name || !color) {
     return reply.code(400).send({ success: false, message: "类型、名称和颜色不能为空" });
@@ -103,11 +106,12 @@ export const createDictionary = async (
 };
 
 export const updateDictionary = async (
-  request: FastifyRequest<{ Params: { id: string }; Body: UpdateDictionaryRequest }>,
+  request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const { id } = request.params;
-  const { name, color, icon, sortOrder } = request.body;
+  const { id } = request.params as { id: string };
+  const body = request.body as UpdateDictionaryRequest;
+  const { name, color, icon, sortOrder } = body;
 
   const existingDict = db.get<{ id: string }>(
     "SELECT id FROM dictionaries WHERE id = ? AND user_id = ?",
@@ -132,10 +136,10 @@ export const updateDictionary = async (
 };
 
 export const deleteDictionary = async (
-  request: FastifyRequest<{ Params: { id: string } }>,
+  request: FastifyRequest,
   reply: FastifyReply
 ) => {
-  const { id } = request.params;
+  const { id } = request.params as { id: string };
 
   const dictionary = db.get<{ id: string }>(
     "SELECT id FROM dictionaries WHERE id = ? AND user_id = ?",
@@ -149,4 +153,51 @@ export const deleteDictionary = async (
   db.run("DELETE FROM dictionaries WHERE id = ?", [id]);
 
   return reply.send({ success: true, message: "删除成功" });
+};
+
+export const initDefaultDictionaries = async (
+  request: FastifyRequest,
+  reply: FastifyReply
+) => {
+  const body = request.body as { type?: DictionaryType };
+  const { type } = body;
+
+  if (type) {
+    const addedCount = initializeDefaultDictionariesForType(request.userId!, type);
+    return reply.send({
+      success: true,
+      message: `成功初始化 ${addedCount} 个默认分类`,
+      data: { addedCount },
+    });
+  }
+
+  let totalAdded = 0;
+  DEFAULT_DICTIONARY_TYPES.forEach((typeConfig) => {
+    totalAdded += initializeDefaultDictionariesForType(request.userId!, typeConfig.key);
+  });
+
+  return reply.send({
+    success: true,
+    message: `成功初始化 ${totalAdded} 个默认分类`,
+    data: { addedCount: totalAdded },
+  });
+};
+
+export const getDictionaryTypes = async (
+  request: FastifyRequest,
+  reply: FastifyReply
+) => {
+  const types = db.all<{
+    id: string;
+    key: string;
+    label: string;
+    description: string | null;
+    icon: string | null;
+    sort_order: number;
+  }>("SELECT * FROM dictionary_types ORDER BY sort_order ASC");
+
+  return reply.send({
+    success: true,
+    data: types,
+  });
 };

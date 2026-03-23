@@ -4,7 +4,7 @@ import zhCN from 'antd/locale/zh_CN'
 import { useSettingsStore } from '@stores/settingsStore'
 
 const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { themeMode, primaryColor } = useSettingsStore()
+  const { themeMode, primaryColor, fontSize } = useSettingsStore()
   const [systemDark, setSystemDark] = useState(
     window.matchMedia('(prefers-color-scheme: dark)').matches
   )
@@ -40,15 +40,25 @@ const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     document.documentElement.style.setProperty('--primary-color', primaryColor)
   }, [primaryColor])
 
+  useEffect(() => {
+    const root = document.documentElement
+    const baseFontSize = fontSize
+    root.style.setProperty('--font-size-base', `${baseFontSize}px`)
+    root.style.setProperty('--font-size-sm', `${baseFontSize - 2}px`)
+    root.style.setProperty('--font-size-lg', `${baseFontSize + 2}px`)
+    root.style.setProperty('--font-size-xl', `${baseFontSize + 6}px`)
+    root.style.fontSize = `${baseFontSize}px`
+  }, [fontSize])
+
   const antdTheme = useMemo(() => ({
     algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
     token: {
       colorPrimary: primaryColor,
       borderRadius: 8,
-      fontSize: 14,
-      fontSizeHeading1: 28,
-      fontSizeHeading2: 22,
-      fontSizeHeading3: 18,
+      fontSize: fontSize,
+      fontSizeHeading1: fontSize + 14,
+      fontSizeHeading2: fontSize + 8,
+      fontSizeHeading3: fontSize + 4,
       lineHeight: 1.6,
       colorBgContainer: isDark ? '#1a1a1a' : '#ffffff',
       colorBgLayout: isDark ? '#0d0d0d' : '#f5f7fa',
@@ -77,8 +87,8 @@ const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       Card: {
         colorBgContainer: isDark ? '#1a1a1a' : '#ffffff',
         borderRadiusLG: 12,
-        boxShadowTertiary: isDark 
-          ? '0 1px 2px 0 rgba(0,0,0,0.3), 0 1px 6px -1px rgba(0,0,0,0.2)' 
+        boxShadowTertiary: isDark
+          ? '0 1px 2px 0 rgba(0,0,0,0.3), 0 1px 6px -1px rgba(0,0,0,0.2)'
           : '0 1px 2px 0 rgba(0,0,0,0.03), 0 1px 6px -1px rgba(0,0,0,0.02)',
       },
       Table: {
@@ -105,7 +115,7 @@ const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         borderRadiusLG: 12,
       },
     },
-  }), [isDark, primaryColor])
+  }), [isDark, primaryColor, fontSize])
 
   return (
     <ConfigProvider locale={zhCN} theme={antdTheme}>

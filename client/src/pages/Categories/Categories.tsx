@@ -25,10 +25,15 @@ import {
   SearchOutlined,
   MoreOutlined,
   AppstoreAddOutlined,
+  SyncOutlined,
+  InboxOutlined,
+  RocketOutlined,
 } from '@ant-design/icons'
 import { useDictionaryStore } from '@stores/dictionaryStore'
 import { useIsMobile } from '@hooks'
 import { useMessage } from '@hooks/useMessage'
+import PageTitle from '@components/PageTitle'
+import { dictionaryApi } from '@services/dictionary'
 import type {
   Dictionary,
   CreateDictionaryRequest,
@@ -195,6 +200,17 @@ const Categories: React.FC = () => {
     }
   }
 
+  const handleInitDefault = async (type?: DictionaryType) => {
+    try {
+      const result = await dictionaryApi.initDefaultDictionaries(type)
+      message.success(`成功初始化 ${result.addedCount} 个默认分类`)
+      fetchDictionaries()
+      fetchDictionaryTypes()
+    } catch (error) {
+      message.error('初始化失败')
+    }
+  }
+
   const getFilteredItems = (type: DictionaryType) => {
     const items = getDictionariesByType(type)
     if (!searchText) return items
@@ -213,6 +229,13 @@ const Categories: React.FC = () => {
           <div className={styles.sectionHeader}>
             <span className={styles.sectionTitle}>{config?.description || config?.label}</span>
             <div className={styles.headerActions}>
+              <Button
+                size="small"
+                icon={<SyncOutlined />}
+                onClick={() => handleInitDefault(type)}
+              >
+                初始化
+              </Button>
               <Button
                 type="primary"
                 size="small"
@@ -265,6 +288,12 @@ const Categories: React.FC = () => {
         <div className={styles.sectionHeader}>
           <span className={styles.sectionTitle}>{config?.description || config?.label}</span>
           <div className={styles.headerActions}>
+            <Button
+              icon={<SyncOutlined />}
+              onClick={() => handleInitDefault(type)}
+            >
+              初始化
+            </Button>
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -380,48 +409,82 @@ const Categories: React.FC = () => {
     </Form>
   )
 
+  const renderEmptyState = () => (
+    <div className={styles.emptyState}>
+      <InboxOutlined className={styles.emptyIcon} />
+      <Typography.Title level={4}>暂无分类数据</Typography.Title>
+      <Typography.Text type="secondary">
+        您可以初始化系统预设的分类，或自定义创建新的分类类型
+      </Typography.Text>
+      <div className={styles.emptyActions}>
+        <Button
+          type="primary"
+          size="large"
+          icon={<RocketOutlined />}
+          onClick={() => handleInitDefault()}
+        >
+          初始化默认分类
+        </Button>
+        <Button
+          size="large"
+          icon={<AppstoreAddOutlined />}
+          onClick={() => handleOpenTypeDialog()}
+        >
+          自定义分类
+        </Button>
+      </div>
+    </div>
+  )
+
   if (isMobile) {
     return (
       <div className={styles.container}>
+        <PageTitle title="分类管理" emoji="🏷️" />
         <Spin spinning={isLoading}>
-          <Card className={styles.mobileCard}>
-            <div className={styles.mobileHeader}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Input
-                  placeholder="搜索字典项"
-                  prefix={<SearchOutlined />}
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                  allowClear
-                  className={styles.searchInput}
-                  style={{ flex: 1, marginRight: 8 }}
-                />
-                <Button
-                  type="primary"
-                  icon={<AppstoreAddOutlined />}
-                  onClick={() => handleOpenTypeDialog()}
-                >
-                  新类型
-                </Button>
-              </div>
-              <div className={styles.mobileTypeSelector}>
-                {dictionaryTypes.map((config) => (
+          {dictionaryTypes.length === 0 ? (
+            <Card className={styles.mobileCard}>
+              {renderEmptyState()}
+            </Card>
+          ) : (
+            <Card className={styles.mobileCard}>
+              <div className={styles.mobileHeader}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Input
+                    placeholder="搜索字典项"
+                    prefix={<SearchOutlined />}
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    allowClear
+                    className={styles.searchInput}
+                    style={{ flex: 1, marginRight: 8 }}
+                  />
                   <Button
-                    key={config.key}
-                    type={currentType === config.key ? 'primary' : 'default'}
-                    size="small"
-                    onClick={() => setCurrentType(config.key)}
+                    type="primary"
+                    icon={<AppstoreAddOutlined />}
+                    onClick={() => handleOpenTypeDialog()}
                   >
-                    {config.label}
+                    新类型
                   </Button>
-                ))}
+                </div>
+                <div className={styles.mobileTypeSelector}>
+                  {dictionaryTypes.map((config) => (
+                    <Button
+                      key={config.key}
+                      type={currentType === config.key ? 'primary' : 'default'}
+                      size="small"
+                      onClick={() => setCurrentType(config.key)}
+                    >
+                      {config.label}
+                    </Button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <Divider style={{ margin: '12px 0' }} />
+              <Divider style={{ margin: '12px 0' }} />
 
-            {currentType && renderTypeContent(currentType)}
-          </Card>
+              {currentType && renderTypeContent(currentType)}
+            </Card>
+          )}
         </Spin>
 
         <Modal
@@ -429,7 +492,7 @@ const Categories: React.FC = () => {
           open={dialogOpen}
           onCancel={handleCloseDialog}
           onOk={handleSubmit}
-          destroyOnClose
+          destroyOnHidden
           afterOpenChange={(open) => {
             if (open && editingItem) {
               form.setFieldsValue({
@@ -448,7 +511,7 @@ const Categories: React.FC = () => {
           open={typeDialogOpen}
           onCancel={handleCloseTypeDialog}
           onOk={handleSubmitType}
-          destroyOnClose
+          destroyOnHidden
           afterOpenChange={(open) => {
             if (open && editingType) {
               typeForm.setFieldsValue({
@@ -467,78 +530,85 @@ const Categories: React.FC = () => {
 
   return (
     <div className={styles.container}>
+      <PageTitle title="分类管理" emoji="🏷️" />
       <Spin spinning={isLoading}>
-        <div className={styles.layoutWrapper}>
-          <Card className={styles.sideMenu}>
-            <div className={styles.sideMenuHeader}>
-              <Typography.Title level={5} style={{ margin: 0 }}>
-                字典分类
-              </Typography.Title>
-              <Tooltip title="添加新类型">
-                <Button
-                  type="text"
-                  size="small"
-                  icon={<AppstoreAddOutlined />}
-                  onClick={() => handleOpenTypeDialog()}
-                />
-              </Tooltip>
-            </div>
-            <Menu
-              mode="inline"
-              selectedKeys={[currentType]}
-              items={menuItems}
-              onClick={({ key }) => setCurrentType(key)}
-              className={styles.sideMenuList}
-            />
+        {dictionaryTypes.length === 0 ? (
+          <Card className={styles.emptyCard}>
+            {renderEmptyState()}
           </Card>
-
-          <Card className={styles.mainContent}>
-            <div className={styles.contentHeader}>
-              <Input
-                placeholder="搜索字典项"
-                prefix={<SearchOutlined />}
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                allowClear
-                style={{ width: 200 }}
+        ) : (
+          <div className={styles.layoutWrapper}>
+            <Card className={styles.sideMenu}>
+              <div className={styles.sideMenuHeader}>
+                <Typography.Title level={5} style={{ margin: 0 }}>
+                  字典分类
+                </Typography.Title>
+                <Tooltip title="添加新类型">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<AppstoreAddOutlined />}
+                    onClick={() => handleOpenTypeDialog()}
+                  />
+                </Tooltip>
+              </div>
+              <Menu
+                mode="inline"
+                selectedKeys={[currentType]}
+                items={menuItems}
+                onClick={({ key }) => setCurrentType(key)}
+                className={styles.sideMenuList}
               />
-              {currentType && (
-                <Dropdown
-                  menu={{
-                    items: [
-                      {
-                        key: 'edit',
-                        icon: <EditOutlined />,
-                        label: '编辑类型',
-                        onClick: () => {
-                          const type = dictionaryTypes.find((t) => t.key === currentType)
-                          if (type) handleOpenTypeDialog(type)
+            </Card>
+
+            <Card className={styles.mainContent}>
+              <div className={styles.contentHeader}>
+                <Input
+                  placeholder="搜索字典项"
+                  prefix={<SearchOutlined />}
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  allowClear
+                  style={{ width: 200 }}
+                />
+                {currentType && (
+                  <Dropdown
+                    menu={{
+                      items: [
+                        {
+                          key: 'edit',
+                          icon: <EditOutlined />,
+                          label: '编辑类型',
+                          onClick: () => {
+                            const type = dictionaryTypes.find((t) => t.key === currentType)
+                            if (type) handleOpenTypeDialog(type)
+                          },
                         },
-                      },
-                      {
-                        key: 'delete',
-                        icon: <DeleteOutlined />,
-                        label: '删除类型',
-                        danger: true,
-                        onClick: () => {
-                          Modal.confirm({
-                            title: '确认删除',
-                            content: '确定要删除该字典类型吗？删除后无法恢复。',
-                            onOk: () => handleDeleteType(currentType),
-                          })
+                        {
+                          key: 'delete',
+                          icon: <DeleteOutlined />,
+                          label: '删除类型',
+                          danger: true,
+                          onClick: () => {
+                            Modal.confirm({
+                              title: '确认删除',
+                              content: '确定要删除该字典类型吗？删除后无法恢复。',
+                              onOk: () => handleDeleteType(currentType),
+                            })
+                          },
                         },
-                      },
-                    ],
-                  }}
-                >
-                  <Button icon={<MoreOutlined />} style={{ marginLeft: 8 }} />
-                </Dropdown>
-              )}
-            </div>
-            <Divider style={{ margin: '12px 0' }} />
-            {currentType && renderTypeContent(currentType)}
-          </Card>
-        </div>
+                      ],
+                    }}
+                  >
+                    <Button icon={<MoreOutlined />} style={{ marginLeft: 8 }} />
+                  </Dropdown>
+                )}
+              </div>
+              <Divider style={{ margin: '12px 0' }} />
+              {currentType && renderTypeContent(currentType)}
+            </Card>
+          </div>
+        )}
       </Spin>
 
       <Modal
@@ -546,7 +616,7 @@ const Categories: React.FC = () => {
         open={dialogOpen}
         onCancel={handleCloseDialog}
         onOk={handleSubmit}
-        destroyOnClose
+        destroyOnHidden
         afterOpenChange={(open) => {
           if (open && editingItem) {
             form.setFieldsValue({
@@ -565,7 +635,7 @@ const Categories: React.FC = () => {
         open={typeDialogOpen}
         onCancel={handleCloseTypeDialog}
         onOk={handleSubmitType}
-        destroyOnClose
+        destroyOnHidden
         afterOpenChange={(open) => {
           if (open && editingType) {
             typeForm.setFieldsValue({

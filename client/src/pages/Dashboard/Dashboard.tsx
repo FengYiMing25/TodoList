@@ -2,14 +2,10 @@ import { useEffect, useMemo } from 'react'
 import { Card, Row, Col, Statistic, List, Tag, Typography, Space, theme, Progress } from 'antd'
 import {
   CheckCircleOutlined,
-  ClockCircleOutlined,
   WalletOutlined,
   RiseOutlined,
   FallOutlined,
   SkinOutlined,
-  ShoppingOutlined,
-  DollarOutlined,
-  CalendarOutlined,
   FlagOutlined,
 } from '@ant-design/icons'
 import ReactECharts from 'echarts-for-react'
@@ -17,9 +13,10 @@ import { useTodoStore } from '@stores/todoStore'
 import { useDictionaryStore } from '@stores/dictionaryStore'
 import { useAccountStore } from '@stores/accountStore'
 import { useWardrobeStore } from '@stores/wardrobeStore'
+import PageTitle from '@components/PageTitle'
 import styles from './Dashboard.module.less'
 
-const { Text, Title } = Typography
+const { Text } = Typography
 
 const Dashboard: React.FC = () => {
   const { token } = theme.useToken()
@@ -152,7 +149,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <Title level={4} className={styles.pageTitle}>数据概览</Title>
+      <PageTitle title="数据概览" emoji="📊" />
 
       <Row gutter={[12, 12]}>
         <Col xs={12} sm={12} lg={6}>
@@ -161,7 +158,7 @@ const Dashboard: React.FC = () => {
               <div className={styles.statIcon} style={{ background: `${token.colorPrimary}15` }}>
                 <CheckCircleOutlined style={{ color: token.colorPrimary, fontSize: 18 }} />
               </div>
-              <div className={styles.statTitle}>待办事项</div>
+              <div className={styles.statTitle}>📋 待办事项</div>
             </div>
             <div className={styles.statValue}>{todoTotal}</div>
             <div className={styles.statFooter}>
@@ -176,7 +173,7 @@ const Dashboard: React.FC = () => {
               <div className={styles.statIcon} style={{ background: `${token.colorSuccess}15` }}>
                 <WalletOutlined style={{ color: token.colorSuccess, fontSize: 20 }} />
               </div>
-              <div className={styles.statTitle}>本月结余</div>
+              <div className={styles.statTitle}>💰 本月结余</div>
             </div>
             <div className={styles.statValue}>¥{(summary.balance || 0).toFixed(0)}</div>
             <div className={styles.statFooter}>
@@ -193,7 +190,7 @@ const Dashboard: React.FC = () => {
               <div className={styles.statIcon} style={{ background: `${token.colorWarning}15` }}>
                 <SkinOutlined style={{ color: token.colorWarning, fontSize: 20 }} />
               </div>
-              <div className={styles.statTitle}>电子衣橱</div>
+              <div className={styles.statTitle}>👗 电子衣橱</div>
             </div>
             <div className={styles.statValue}>{wardrobeStats?.totalItems || 0}</div>
             <div className={styles.statFooter}>
@@ -210,7 +207,7 @@ const Dashboard: React.FC = () => {
               <div className={styles.statIcon} style={{ background: `${token.colorError}15` }}>
                 <FlagOutlined style={{ color: token.colorError, fontSize: 20 }} />
               </div>
-              <div className={styles.statTitle}>高优先级</div>
+              <div className={styles.statTitle}>🚨 高优先级</div>
             </div>
             <div className={styles.statValue}>{highPriorityCount}</div>
             <div className={styles.statFooter}>
@@ -225,8 +222,7 @@ const Dashboard: React.FC = () => {
           <Card
             title={
               <Space size={4}>
-                <CheckCircleOutlined style={{ color: token.colorPrimary }} />
-                <span className={styles.cardTitle}>待办状态分布</span>
+                <span className={styles.cardTitle}>🎯 待办状态分布</span>
               </Space>
             }
             className={styles.chartCard}
@@ -242,8 +238,7 @@ const Dashboard: React.FC = () => {
           <Card
             title={
               <Space size={4}>
-                <SkinOutlined style={{ color: token.colorWarning }} />
-                <span className={styles.cardTitle}>衣橱分类统计</span>
+                <span className={styles.cardTitle}>👚 衣橱分类统计</span>
               </Space>
             }
             className={styles.chartCard}
@@ -259,8 +254,7 @@ const Dashboard: React.FC = () => {
           <Card
             title={
               <Space size={4}>
-                <WalletOutlined style={{ color: token.colorSuccess }} />
-                <span className={styles.cardTitle}>收支趋势</span>
+                <span className={styles.cardTitle}>📈 收支趋势</span>
               </Space>
             }
             className={styles.chartCard}
@@ -279,8 +273,7 @@ const Dashboard: React.FC = () => {
           <Card
             title={
               <Space size={4}>
-                <ClockCircleOutlined style={{ color: token.colorPrimary }} />
-                <span className={styles.cardTitle}>最近待办</span>
+                <span className={styles.cardTitle}>⏰ 最近待办</span>
               </Space>
             }
             className={styles.card}
@@ -327,8 +320,7 @@ const Dashboard: React.FC = () => {
           <Card
             title={
               <Space size={4}>
-                <ShoppingOutlined style={{ color: token.colorWarning }} />
-                <span className={styles.cardTitle}>衣橱价值统计</span>
+                <span className={styles.cardTitle}>💎 衣橱价值统计</span>
               </Space>
             }
             className={styles.card}
@@ -336,17 +328,16 @@ const Dashboard: React.FC = () => {
             <Row gutter={[12, 12]}>
               <Col xs={12} sm={12}>
                 <Statistic
-                  title={<span className={styles.statLabel}>总价值</span>}
+                  title={<span className={styles.statLabel}>💵 总价值</span>}
                   value={wardrobeStats?.totalValue || 0}
                   precision={2}
-                  prefix={<DollarOutlined />}
                   suffix="元"
                   valueStyle={{ color: token.colorPrimary, fontSize: 20 }}
                 />
               </Col>
               <Col xs={12} sm={12}>
                 <Statistic
-                  title={<span className={styles.statLabel}>平均使用</span>}
+                  title={<span className={styles.statLabel}>📅 平均使用</span>}
                   value={wardrobeStats?.avgUsageDays || 0}
                   suffix="天"
                   valueStyle={{ color: token.colorSuccess, fontSize: 20 }}
@@ -354,19 +345,17 @@ const Dashboard: React.FC = () => {
               </Col>
               <Col xs={12} sm={12}>
                 <Statistic
-                  title={<span className={styles.statLabel}>使用中</span>}
+                  title={<span className={styles.statLabel}>✨ 使用中</span>}
                   value={wardrobeStats?.inUseCount || 0}
                   suffix="件"
-                  prefix={<SkinOutlined />}
                   valueStyle={{ fontSize: 20 }}
                 />
               </Col>
               <Col xs={12} sm={12}>
                 <Statistic
-                  title={<span className={styles.statLabel}>已出库</span>}
+                  title={<span className={styles.statLabel}>📦 已出库</span>}
                   value={wardrobeStats?.discardedCount || 0}
                   suffix="件"
-                  prefix={<CalendarOutlined />}
                   valueStyle={{ fontSize: 20 }}
                 />
               </Col>

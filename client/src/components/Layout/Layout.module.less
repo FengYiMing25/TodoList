@@ -8,16 +8,46 @@
     .ant-pro-page-container-children-container {
       padding-block: 0px;
       padding-inline: 0px;
-
-      // @media (min-width: 576px) {
-      //   padding-block: 12px;
-      //   padding-inline: 16px;
-      // }
-
-      // @media (min-width: 992px) {
-      //   padding-block: 16px;
-      //   padding-inline: 24px;
-      // }
     }
   }
+}
+
+.mobileDrawer {
+  :global {
+    .ant-drawer-header {
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .ant-drawer-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .ant-drawer-body {
+      padding: 0;
+    }
+  }
+}
+
+.menuItem {
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+
+  &:hover {
+    background: var(--bg-tertiary);
+  }
+}
+
+.menuItemActive {
+  background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+.menuEmoji {
+  font-size: 18px;
 }

@@ -35,6 +35,8 @@ export const initDatabase = async (): Promise<void> => {
       email TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
       avatar TEXT,
+      month_salary REAL,
+      daily_expense REAL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -153,6 +155,22 @@ export const initDatabase = async (): Promise<void> => {
     }
   } catch {
     console.log("Attachments table migration skipped");
+  }
+
+  try {
+    const userTableInfo = db.exec("PRAGMA table_info(users)");
+    if (userTableInfo.length > 0) {
+      const columns = userTableInfo[0].values.map((col) => col[1] as string);
+
+      if (!columns.includes("month_salary")) {
+        db.run("ALTER TABLE users ADD COLUMN month_salary REAL");
+      }
+      if (!columns.includes("daily_expense")) {
+        db.run("ALTER TABLE users ADD COLUMN daily_expense REAL");
+      }
+    }
+  } catch {
+    console.log("Users table migration skipped");
   }
 
   db.run(`

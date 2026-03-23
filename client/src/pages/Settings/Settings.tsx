@@ -12,6 +12,7 @@ import {
   Avatar,
   Upload,
   Space,
+  InputNumber,
 } from 'antd'
 import {
   SaveOutlined,
@@ -24,6 +25,7 @@ import { useAuthStore } from '@stores/authStore'
 import { useSettingsStore } from '@stores/settingsStore'
 import { useMessage } from '@hooks/useMessage'
 import { useImageUpload } from '@hooks'
+import PageTitle from '@components/PageTitle'
 import styles from './Settings.module.less'
 
 const themeColors = [
@@ -73,12 +75,25 @@ const Settings: React.FC = () => {
   })
 
   useEffect(() => {
+    if (user) {
+      profileForm.setFieldsValue({
+        username: user.username || '',
+        email: user.email || '',
+        monthSalary: user.monthSalary || undefined,
+        dailyExpense: user.dailyExpense || undefined,
+      })
+    }
     if (user?.avatar) {
       setImageUrl(user.avatar)
     }
-  }, [user?.avatar, setImageUrl])
+  }, [user, profileForm, setImageUrl])
 
-  const handleProfileSubmit = async (values: { username: string; email: string }) => {
+  const handleProfileSubmit = async (values: {
+    username: string
+    email: string
+    monthSalary?: number
+    dailyExpense?: number
+  }) => {
     try {
       await updateProfile(values)
       message.success('个人资料更新成功')
@@ -128,9 +143,10 @@ const Settings: React.FC = () => {
 
   return (
     <div className={styles.container}>
+      <PageTitle title="系统设置" emoji="⚙️" />
       <Row gutter={[24, 24]}>
         <Col xs={24} lg={12}>
-          <Card title="个人资料" className={styles.card}>
+          <Card title="📋 个人资料" className={styles.card}>
             <div className={styles.avatarSection}>
               <Upload {...uploadProps}>
                 <Space direction="vertical" align="center">
@@ -149,16 +165,12 @@ const Settings: React.FC = () => {
             <Form
               form={profileForm}
               layout="vertical"
-              initialValues={{
-                username: user?.username || '',
-                email: user?.email || '',
-              }}
               onFinish={handleProfileSubmit}
             >
-              <Form.Item name="username" label="用户名">
+              <Form.Item name="username" label="👤 用户名">
                 <Input placeholder="请输入用户名" />
               </Form.Item>
-              <Form.Item name="email" label="邮箱">
+              <Form.Item name="email" label="📧 邮箱">
                 <Input type="email" placeholder="请输入邮箱" />
               </Form.Item>
               <Form.Item>
@@ -171,7 +183,49 @@ const Settings: React.FC = () => {
         </Col>
 
         <Col xs={24} lg={12}>
-          <Card title="修改密码" className={styles.card}>
+          <Card title="💰 财务设置" className={styles.card}>
+            <Form
+              form={profileForm}
+              layout="vertical"
+              onFinish={handleProfileSubmit}
+            >
+              <Form.Item
+                name="monthSalary"
+                label="💵 月工资（元）"
+                tooltip="用于计算回本天数"
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  placeholder="请输入月工资"
+                  min={0}
+                  precision={0}
+                  prefix="¥"
+                />
+              </Form.Item>
+              <Form.Item
+                name="dailyExpense"
+                label="🛒 日均支出（元）"
+                tooltip="每天大概的花销"
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  placeholder="请输入日均支出"
+                  min={0}
+                  precision={0}
+                  prefix="¥"
+                />
+              </Form.Item>
+              <Form.Item>
+                <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>
+                  保存设置
+                </Button>
+              </Form.Item>
+            </Form>
+          </Card>
+        </Col>
+
+        <Col xs={24} lg={12}>
+          <Card title="🔐 修改密码" className={styles.card}>
             <Form form={passwordForm} layout="vertical" onFinish={handlePasswordSubmit}>
               <Form.Item
                 name="oldPassword"
@@ -218,7 +272,7 @@ const Settings: React.FC = () => {
         </Col>
 
         <Col xs={24}>
-          <Card title="外观设置" className={styles.card}>
+          <Card title="🎨 外观设置" className={styles.card}>
             <Row gutter={[24, 16]}>
               <Col xs={24} sm={12} lg={8}>
                 <div className={styles.settingItem}>
@@ -278,7 +332,7 @@ const Settings: React.FC = () => {
         </Col>
 
         <Col xs={24}>
-          <Card title="待办事项设置" className={styles.card}>
+          <Card title="✅ 待办事项设置" className={styles.card}>
             <Row gutter={[24, 16]}>
               <Col xs={24} sm={12}>
                 <div className={styles.settingItem}>

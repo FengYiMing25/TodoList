@@ -3,6 +3,8 @@ export interface User {
   username: string;
   email: string;
   avatar?: string;
+  monthSalary?: number;
+  dailyExpense?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -21,4 +23,17 @@ export interface RegisterRequest {
 export interface AuthResponse {
   user: User;
   token: string;
+}
+
+export interface UpdateProfileRequest {
+  username?: string;
+  email?: string;
+  avatar?: string;
+  monthSalary?: number;
+  dailyExpense?: number;
+}
+
+export interface ChangePasswordRequest {
+  oldPassword: string;
+  newPassword: string;
 }

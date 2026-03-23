@@ -16,11 +16,12 @@
 .title {
   font-size: 16px;
   font-weight: 600;
+  color: var(--text-primary);
 }
 
 .count {
   font-size: 12px;
-  color: var(--ant-color-text-secondary);
+  color: var(--text-secondary);
 }
 
 .searchBar {
@@ -44,9 +45,11 @@
 }
 
 .card {
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s;
+  background-color: var(--bg-card);
+  border-color: var(--border-color);
 
   &:active {
     transform: scale(0.98);
@@ -74,6 +77,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   margin-right: 8px;
+  color: var(--text-primary);
 }
 
 .cardMeta {
@@ -88,12 +92,12 @@
   align-items: center;
   justify-content: space-between;
   padding-top: 8px;
-  border-top: 1px solid var(--ant-color-border-secondary);
+  border-top: 1px solid var(--border-color);
 }
 
 .cardDate {
   font-size: 12px;
-  color: var(--ant-color-text-secondary);
+  color: var(--text-secondary);
 }
 
 .cardActions {

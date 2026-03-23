@@ -15,6 +15,7 @@ import {
 } from '@ant-design/icons'
 import { useAuthStore } from '@stores/authStore'
 import { useSettingsStore } from '@stores/settingsStore'
+import { useIsMobile } from '@hooks'
 import PageProgress from '@components/PageProgress'
 import styles from './Layout.module.less'
 
@@ -56,6 +57,7 @@ const Layout: React.FC = () => {
   const location = useLocation()
   const { user, logout } = useAuthStore()
   const { themeMode } = useSettingsStore()
+  const isMobile = useIsMobile()
   const [collapsed, setCollapsed] = useState(false)
   const [systemDark, setSystemDark] = useState(
     window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -71,11 +73,24 @@ const Layout: React.FC = () => {
     return () => mediaQuery.removeEventListener('change', handleChange)
   }, [])
 
+  useEffect(() => {
+    if (isMobile) {
+      setCollapsed(true)
+    }
+  }, [isMobile])
+
   const isDark = themeMode === 'dark' || (themeMode === 'system' && systemDark)
 
   const handleLogout = () => {
     logout()
     navigate('/login')
+  }
+
+  const handleMenuClick = (path: string) => {
+    navigate(path)
+    if (isMobile) {
+      setCollapsed(true)
+    }
   }
 
   const userMenuItems = [
@@ -110,7 +125,7 @@ const Layout: React.FC = () => {
         location={{ pathname: location.pathname }}
         route={{ routes: menuItems }}
         menuItemRender={(item, dom) => (
-          <div onClick={() => navigate(item.path || '/')}>{dom}</div>
+          <div onClick={() => handleMenuClick(item.path || '/')}>{dom}</div>
         )}
         actionsRender={() => [
           <Badge key="notification" count={0} size="small">
@@ -124,13 +139,12 @@ const Layout: React.FC = () => {
                 style={{ backgroundColor: token.colorPrimary }}
                 icon={!user?.avatar && <UserOutlined />}
               />
-              <span style={{ fontSize: 14 }}>{user?.username || '用户'}</span>
+              {!isMobile && <span style={{ fontSize: 14 }}>{user?.username || '用户'}</span>}
             </Space>
           </Dropdown>,
         ]}
-
         menuFooterRender={(props) => {
-          if (props?.collapsed) return undefined
+          if (props?.collapsed || isMobile) return undefined
           return (
             <div style={{ textAlign: 'center', paddingBlockStart: 12 }}>
               <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>v1.0.0</div>

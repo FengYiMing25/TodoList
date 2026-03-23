@@ -3,12 +3,14 @@
 }
 
 .summaryCard {
-  border-radius: 8px;
+  border-radius: 12px;
   transition: all 0.3s;
+  background-color: var(--bg-card);
+  border-color: var(--border-color);
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px var(--shadow-color);
   }
 }
 
@@ -25,9 +27,11 @@
 }
 
 .mobileCard {
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s;
+  background-color: var(--bg-card);
+  border-color: var(--border-color);
 
   &:active {
     transform: scale(0.98);
@@ -61,12 +65,12 @@
 
 .mobileCardDate {
   font-size: 12px;
-  color: var(--ant-color-text-secondary);
+  color: var(--text-secondary);
 }
 
 .mobileCardDesc {
   font-size: 12px;
-  color: var(--ant-color-text-secondary);
+  color: var(--text-secondary);
   margin-top: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -79,7 +83,7 @@
   justify-content: flex-end;
   gap: 4px;
   padding-top: 8px;
-  border-top: 1px solid var(--ant-color-border-secondary);
+  border-top: 1px solid var(--border-color);
 }
 
 .summaryRow {
@@ -110,11 +114,12 @@
 .mobileTitle {
   font-size: 16px;
   font-weight: 600;
+  color: var(--text-primary);
 }
 
 .mobileCount {
   font-size: 12px;
-  color: var(--ant-color-text-secondary);
+  color: var(--text-secondary);
 }
 
 .filterRow {

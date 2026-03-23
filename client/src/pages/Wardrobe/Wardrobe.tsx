@@ -38,6 +38,7 @@ import type { ActionType, ProColumns } from '@ant-design/pro-components'
 import { useWardrobeStore } from '@stores/wardrobeStore'
 import { useDictionaryStore } from '@stores/dictionaryStore'
 import { useImageUpload, useIsMobile } from '@hooks'
+import PageTitle from '@components/PageTitle'
 import type {
   WardrobeItem,
   CreateWardrobeRequest,
@@ -377,6 +378,7 @@ const Wardrobe: React.FC = () => {
 
   const renderMobileView = () => (
     <div className={styles.container}>
+      <PageTitle title="电子衣橱" emoji="👗" />
       <Row gutter={[8, 8]} className={styles.summaryRow}>
         <Col span={12}>
           <Card className={styles.summaryCard}>
@@ -454,7 +456,7 @@ const Wardrobe: React.FC = () => {
       open={dialogOpen}
       onCancel={handleCloseDialog}
       onOk={handleSubmit}
-      destroyOnClose
+      destroyOnHidden
       width={520}
       afterOpenChange={(open) => {
         if (open && editingItem) {
@@ -528,7 +530,7 @@ const Wardrobe: React.FC = () => {
   )
 
   const renderDiscardDialog = () => (
-    <Modal title="物品出库" open={discardDialogOpen} onCancel={handleCloseDiscardDialog} onOk={handleDiscard} destroyOnClose width={420}>
+    <Modal title="物品出库" open={discardDialogOpen} onCancel={handleCloseDiscardDialog} onOk={handleDiscard} destroyOnHidden width={420}>
       <Form form={discardForm} layout="vertical" preserve={false}>
         <Form.Item name="discardDate" label="出库日期" rules={[{ required: true, message: '请选择出库日期' }]}>
           <DatePicker style={{ width: '100%' }} />
@@ -571,6 +573,7 @@ const Wardrobe: React.FC = () => {
 
   return (
     <div className={styles.container}>
+      <PageTitle title="电子衣橱" emoji="👗" />
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={6}>
           <Card className={styles.summaryCard}>

@@ -10,9 +10,6 @@ import {
   DatePicker,
   InputNumber,
   Popconfirm,
-  Row,
-  Col,
-  Statistic,
   Space,
   Tooltip,
   Empty,
@@ -22,9 +19,6 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  ArrowUpOutlined,
-  ArrowDownOutlined,
-  WalletOutlined,
   CalendarOutlined,
 } from '@ant-design/icons'
 import { ProTable } from '@ant-design/pro-components'
@@ -32,9 +26,11 @@ import type { ActionType, ProColumns } from '@ant-design/pro-components'
 import { useAccountStore } from '@stores/accountStore'
 import { useDictionaryStore } from '@stores/dictionaryStore'
 import { useMessage, useIsMobile } from '@hooks'
+import PageTitle from '@components/PageTitle'
 import type { Account, CreateAccountRequest, UpdateAccountRequest, AccountType } from '@types'
 import dayjs from 'dayjs'
 import styles from './AccountBook.module.less'
+import BreakEvenCard from './BreakEvenCard'
 
 const AccountBook: React.FC = () => {
   const {
@@ -232,88 +228,54 @@ const AccountBook: React.FC = () => {
     const dictType = account.type === 'income' ? 'account_income_category' : 'account_expense_category'
     const dict = getDictionariesByType(dictType).find(d => d.name === account.category)
     return (
-    <Card key={account.id} className={styles.mobileCard}>
-      <div className={styles.mobileCardHeader}>
-        <div
-          className={styles.mobileCardAmount}
-          style={{
-            color: account.type === 'income' ? '#52c41a' : '#ff4d4f',
-          }}
-        >
-          {formatAmount(account.amount, account.type)}
+      <Card key={account.id} className={styles.mobileCard}>
+        <div className={styles.mobileCardHeader}>
+          <div
+            className={styles.mobileCardAmount}
+            style={{
+              color: account.type === 'income' ? '#ff4d4f' : '#52c41a',
+            }}
+          >
+            {formatAmount(account.amount, account.type)}
+          </div>
+          <Tag color={account.type === 'income' ? 'danger' : 'success'}>
+            {account.type === 'income' ? '收入' : '支出'}
+          </Tag>
         </div>
-        <Tag color={account.type === 'income' ? 'success' : 'error'}>
-          {account.type === 'income' ? '收入' : '支出'}
-        </Tag>
-      </div>
-      <div className={styles.mobileCardMeta}>
-        <Tag color={dict?.color}>{account.category}</Tag>
-        <div className={styles.mobileCardDate}>
-          <CalendarOutlined style={{ marginRight: 4 }} />
-          {dayjs(account.date).format('YYYY-MM-DD')}
+        <div className={styles.mobileCardMeta}>
+          <Tag color={dict?.color}>{account.category}</Tag>
+          <div className={styles.mobileCardDate}>
+            <CalendarOutlined style={{ marginRight: 4 }} />
+            {dayjs(account.date).format('YYYY-MM-DD')}
+          </div>
         </div>
-      </div>
-      {account.description && (
-        <div className={styles.mobileCardDesc}>{account.description}</div>
-      )}
-      <div className={styles.mobileCardFooter}>
-        <Button
-          type="text"
-          size="small"
-          icon={<EditOutlined />}
-          onClick={() => handleOpenDialog(account)}
-        />
-        <Popconfirm
-          title="确定要删除吗？"
-          onConfirm={() => handleDelete(account.id)}
-          okText="确定"
-          cancelText="取消"
-        >
-          <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-        </Popconfirm>
-      </div>
-    </Card>
-  )
+        {account.description && (
+          <div className={styles.mobileCardDesc}>{account.description}</div>
+        )}
+        <div className={styles.mobileCardFooter}>
+          <Button
+            type="text"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => handleOpenDialog(account)}
+          />
+          <Popconfirm
+            title="确定要删除吗？"
+            onConfirm={() => handleDelete(account.id)}
+            okText="确定"
+            cancelText="取消"
+          >
+            <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
+        </div>
+      </Card>
+    )
   }
 
   const renderMobileView = () => (
     <div className={styles.container}>
-      <Row gutter={[8, 8]} className={styles.summaryRow}>
-        <Col span={8}>
-          <Card className={styles.summaryCard}>
-            <Statistic
-              title="收入"
-              value={summary.income}
-              precision={0}
-              valueStyle={{ color: '#52c41a', fontSize: 16 }}
-              prefix={<ArrowUpOutlined style={{ fontSize: 12 }} />}
-            />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card className={styles.summaryCard}>
-            <Statistic
-              title="支出"
-              value={summary.expense}
-              precision={0}
-              valueStyle={{ color: '#ff4d4f', fontSize: 16 }}
-              prefix={<ArrowDownOutlined style={{ fontSize: 12 }} />}
-            />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card className={styles.summaryCard}>
-            <Statistic
-              title="结余"
-              value={summary.balance}
-              precision={0}
-              valueStyle={{ color: summary.balance >= 0 ? '#52c41a' : '#ff4d4f', fontSize: 16 }}
-              prefix={<WalletOutlined style={{ fontSize: 12 }} />}
-            />
-          </Card>
-        </Col>
-      </Row>
-
+      <PageTitle title="记账本" emoji="💰" />
+      <BreakEvenCard totalIncome={summary.income} totalExpense={summary.expense} />
       <div className={styles.mobileHeader}>
         <div className={styles.mobileHeaderTop}>
           <span className={styles.mobileTitle}>记账记录</span>
@@ -364,7 +326,7 @@ const AccountBook: React.FC = () => {
           open={dialogOpen}
           onCancel={handleCloseDialog}
           onOk={handleSubmit}
-          destroyOnClose
+          destroyOnHidden={true}
           width={520}
           afterOpenChange={(open) => {
             if (open && editingAccount) {
@@ -431,45 +393,8 @@ const AccountBook: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={8}>
-          <Card className={styles.summaryCard}>
-            <Statistic
-              title="收入"
-              value={summary.income}
-              precision={2}
-              valueStyle={{ color: '#52c41a' }}
-              prefix={<ArrowUpOutlined />}
-              suffix="元"
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={8}>
-          <Card className={styles.summaryCard}>
-            <Statistic
-              title="支出"
-              value={summary.expense}
-              precision={2}
-              valueStyle={{ color: '#ff4d4f' }}
-              prefix={<ArrowDownOutlined />}
-              suffix="元"
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={8}>
-          <Card className={styles.summaryCard}>
-            <Statistic
-              title="结余"
-              value={summary.balance}
-              precision={2}
-              valueStyle={{ color: summary.balance >= 0 ? '#52c41a' : '#ff4d4f' }}
-              prefix={<WalletOutlined />}
-              suffix="元"
-            />
-          </Card>
-        </Col>
-      </Row>
-
+      <PageTitle title="记账本" emoji="💰" />
+      <BreakEvenCard totalIncome={summary.income} totalExpense={summary.expense} />
       <Card>
         <ProTable<Account>
           actionRef={actionRef}
@@ -536,7 +461,7 @@ const AccountBook: React.FC = () => {
         open={dialogOpen}
         onCancel={handleCloseDialog}
         onOk={handleSubmit}
-        destroyOnClose
+        destroyOnHidden={true}
         width={520}
         afterOpenChange={(open) => {
           if (open && editingAccount) {

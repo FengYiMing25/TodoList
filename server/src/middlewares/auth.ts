@@ -1,4 +1,4 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyRequest, FastifyReply, HookHandlerDoneFunction } from "fastify";
 import jwt from "jsonwebtoken";
 
 declare module "fastify" {
@@ -7,10 +7,11 @@ declare module "fastify" {
   }
 }
 
-export const authMiddleware = async (
+export const authMiddleware = (
   request: FastifyRequest,
-  reply: FastifyReply
-): Promise<void> => {
+  reply: FastifyReply,
+  done: HookHandlerDoneFunction
+): void => {
   const authHeader = request.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -26,9 +27,9 @@ export const authMiddleware = async (
       process.env.JWT_SECRET || "secret"
     ) as { userId: string };
     request.userId = decoded.userId;
+    done();
   } catch {
     reply.code(401).send({ success: false, message: "Token无效或已过期" });
-    return;
   }
 };
 

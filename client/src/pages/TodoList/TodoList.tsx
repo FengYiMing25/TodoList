@@ -30,6 +30,7 @@ import type { ActionType, ProColumns } from '@ant-design/pro-components'
 import { useTodoStore } from '@stores/todoStore'
 import { useDictionaryStore } from '@stores/dictionaryStore'
 import { useMessage, useIsMobile } from '@hooks'
+import PageTitle from '@components/PageTitle'
 import type { Todo, CreateTodoRequest, UpdateTodoRequest, Priority, TodoStatus } from '@types'
 import dayjs from 'dayjs'
 import styles from './TodoList.module.less'
@@ -369,6 +370,7 @@ const TodoList: React.FC = () => {
 
   const renderMobileView = () => (
     <div className={styles.container}>
+      <PageTitle title="待办事项" emoji="✅" />
       <div className={styles.mobileHeader}>
         <div className={styles.mobileHeaderTop}>
           <span className={styles.mobileTitle}>待办事项</span>
@@ -502,6 +504,7 @@ const TodoList: React.FC = () => {
 
   return (
     <Card className={styles.container}>
+      <PageTitle title="待办事项" emoji="✅" />
       <ProTable<Todo>
         actionRef={actionRef}
         columns={columns}
@@ -569,7 +572,7 @@ const TodoList: React.FC = () => {
         open={dialogOpen}
         onCancel={handleCloseDialog}
         onOk={handleSubmit}
-        destroyOnClose
+        destroyOnHidden
         width={520}
         afterOpenChange={(open) => {
           if (open && editingTodo) {

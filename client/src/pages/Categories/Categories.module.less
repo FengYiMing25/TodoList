@@ -12,6 +12,9 @@
   width: 240px;
   flex-shrink: 0;
   height: fit-content;
+  background-color: var(--bg-card);
+  border-color: var(--border-color);
+  border-radius: 12px;
 }
 
 .sideMenuHeader {
@@ -35,7 +38,7 @@
 
 .helpSection {
   padding: 8px;
-  background: var(--ant-color-bg-layout);
+  background: var(--bg-tertiary);
   border-radius: 6px;
 }
 
@@ -64,15 +67,18 @@
 .sectionTitle {
   font-size: 16px;
   font-weight: 500;
+  color: var(--text-primary);
 }
 
 .itemCard {
-  border-radius: 8px;
+  border-radius: 12px;
   transition: all 0.3s;
+  background-color: var(--bg-card);
+  border-color: var(--border-color);
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px var(--shadow-color);
   }
 }
 
@@ -84,6 +90,7 @@
 
 .itemName {
   font-weight: 500;
+  color: var(--text-primary);
 }
 
 .colorDot {
@@ -118,12 +125,14 @@
 }
 
 .colorSelected {
-  border-color: #1890ff;
+  border-color: var(--primary-color);
   box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
 }
 
 .mobileCard {
   padding: 0;
+  background-color: var(--bg-card);
+  border-color: var(--border-color);
 }
 
 .mobileHeader {
@@ -158,9 +167,9 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: var(--ant-color-bg-container);
-  border-radius: 8px;
-  border: 1px solid var(--ant-color-border);
+  background: var(--bg-card);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
 }
 
 .mobileItemContent {
@@ -172,6 +181,33 @@
 .mobileItemActions {
   display: flex;
   gap: 4px;
+}
+
+.emptyCard {
+  background-color: var(--bg-card);
+  border-color: var(--border-color);
+  border-radius: 12px;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 80px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
+.emptyActions {
+  display: flex;
+  gap: 16px;
+  margin-top: 32px;
 }
 
 @media (max-width: 768px) {

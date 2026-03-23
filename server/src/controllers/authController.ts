@@ -4,13 +4,8 @@ import { v4 as uuidv4 } from "uuid";
 import db from "../database";
 import { generateToken } from "../middlewares/auth";
 import { deleteAttachmentsByEntity } from "../routes/upload";
-import type { RegisterRequest, LoginRequest, User } from "@shared/types";
-
-interface UpdateProfileBody {
-  username?: string;
-  email?: string;
-  avatar?: string;
-}
+import { initializeDefaultDictionaries } from "../utils/initDefaultData";
+import type { RegisterRequest, LoginRequest, User, UpdateProfileRequest } from "@shared/types";
 
 interface UserRow {
   id: string;
@@ -18,6 +13,8 @@ interface UserRow {
   email: string;
   password: string;
   avatar: string | null;
+  month_salary: number | null;
+  daily_expense: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -27,6 +24,8 @@ const formatUser = (user: UserRow): User => ({
   username: user.username,
   email: user.email,
   avatar: user.avatar || undefined,
+  monthSalary: user.month_salary || undefined,
+  dailyExpense: user.daily_expense || undefined,
   createdAt: user.created_at,
   updatedAt: user.updated_at,
 });
@@ -57,6 +56,8 @@ export const register = async (
     `INSERT INTO users (id, username, email, password, created_at, updated_at) VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))`,
     [userId, username, email, hashedPassword]
   );
+
+  initializeDefaultDictionaries(userId);
 
   const token = generateToken(userId);
 
@@ -116,7 +117,7 @@ export const getProfile = async (
   reply: FastifyReply
 ) => {
   const user = db.get<UserRow>(
-    "SELECT id, username, email, avatar, created_at, updated_at FROM users WHERE id = ?",
+    "SELECT * FROM users WHERE id = ?",
     [request.userId!]
   );
 
@@ -131,10 +132,10 @@ export const getProfile = async (
 };
 
 export const updateProfile = async (
-  request: FastifyRequest<{ Body: UpdateProfileBody }>,
+  request: FastifyRequest<{ Body: UpdateProfileRequest }>,
   reply: FastifyReply
 ) => {
-  const { username, email, avatar } = request.body;
+  const { username, email, avatar, monthSalary, dailyExpense } = request.body;
 
   const oldUser = db.get<UserRow>(
     "SELECT avatar FROM users WHERE id = ?",
@@ -161,12 +162,12 @@ export const updateProfile = async (
   }
 
   db.run(
-    `UPDATE users SET username = COALESCE(?, username), email = COALESCE(?, email), avatar = COALESCE(?, avatar), updated_at = datetime('now') WHERE id = ?`,
-    [username, email, avatar, request.userId]
+    `UPDATE users SET username = COALESCE(?, username), email = COALESCE(?, email), avatar = COALESCE(?, avatar), month_salary = COALESCE(?, month_salary), daily_expense = COALESCE(?, daily_expense), updated_at = datetime('now') WHERE id = ?`,
+    [username, email, avatar, monthSalary, dailyExpense, request.userId]
   );
 
   const user = db.get<UserRow>(
-    "SELECT id, username, email, avatar, created_at, updated_at FROM users WHERE id = ?",
+    "SELECT * FROM users WHERE id = ?",
     [request.userId!]
   );
 
