@@ -111,9 +111,6 @@ const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       Modal: {
         borderRadiusLG: 12,
       },
-      Drawer: {
-        borderRadiusLG: 12,
-      },
     },
   }), [isDark, primaryColor, fontSize])
 

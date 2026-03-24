@@ -56,7 +56,7 @@ const startServer = async () => {
       },
     });
 
-    const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, "../uploads");
+    const uploadDir = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, "../uploads"));
     if (!require("fs").existsSync(uploadDir)) {
       require("fs").mkdirSync(uploadDir, { recursive: true });
     }
