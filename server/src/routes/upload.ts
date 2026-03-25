@@ -25,11 +25,11 @@ const deleteAttachmentsByEntity = (entityType: string, entityId: string) => {
     "SELECT filename FROM attachments WHERE entity_type = ? AND entity_id = ?",
     [entityType, entityId]
   );
-  
+
   attachments.forEach((att) => {
     deleteAttachmentFile(att.filename);
   });
-  
+
   db.run(
     "DELETE FROM attachments WHERE entity_type = ? AND entity_id = ?",
     [entityType, entityId]
@@ -40,29 +40,37 @@ export default async function uploadRoutes(fastify: FastifyInstance) {
   fastify.post("/", {
     preHandler: authMiddleware,
   }, async (request, reply) => {
-    const parts = request.parts();
     let fileData: { filename: string; mimetype: string; buffer: Buffer } | null = null;
     let todoId: string | undefined;
     let entityType: string | undefined;
     let entityId: string | undefined;
 
-    for await (const part of parts) {
-      if (part.type === "field") {
-        if (part.fieldname === "todoId") {
-          todoId = part.value as string;
-        } else if (part.fieldname === "entityType") {
-          entityType = part.value as string;
-        } else if (part.fieldname === "entityId") {
-          entityId = part.value as string;
+    try {
+      const parts = request.parts();
+      for await (const part of parts) {
+        if (part.type === "field") {
+          if (part.fieldname === "todoId") {
+            todoId = part.value as string;
+          } else if (part.fieldname === "entityType") {
+            entityType = part.value as string;
+          } else if (part.fieldname === "entityId") {
+            entityId = part.value as string;
+          }
+        } else if (part.type === "file") {
+          const buffer = await part.toBuffer();
+          fileData = {
+            filename: part.filename,
+            mimetype: part.mimetype,
+            buffer,
+          };
         }
-      } else if (part.type === "file") {
-        const buffer = await part.toBuffer();
-        fileData = {
-          filename: part.filename,
-          mimetype: part.mimetype,
-          buffer,
-        };
       }
+    } catch (err: any) {
+      if (err.code === "ERR_STREAM_PREMATURE_CLOSE") {
+        fastify.log.warn({ err }, "Upload stream was closed prematurely");
+        return reply.code(499).send({ success: false, message: "上传被中断" });
+      }
+      throw err;
     }
 
     if (!fileData) {

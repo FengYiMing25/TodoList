@@ -1,22 +1,25 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from 'path'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import * as path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@components': path.resolve(__dirname, './src/components'),
-      '@pages': path.resolve(__dirname, './src/pages'),
-      '@stores': path.resolve(__dirname, './src/stores'),
-      '@services': path.resolve(__dirname, './src/services'),
-      '@styles': path.resolve(__dirname, './src/styles'),
-      '@hooks': path.resolve(__dirname, './src/hooks'),
-      '@utils': path.resolve(__dirname, './src/utils'),
-      '@types': path.resolve(__dirname, './src/types'),
-      '@assets': path.resolve(__dirname, './src/assets'),
-      '@shared/types': path.resolve(__dirname, '../shared/types'),
+      "@": path.resolve(__dirname, "./src"),
+      "@components": path.resolve(__dirname, "./src/components"),
+      "@pages": path.resolve(__dirname, "./src/pages"),
+      "@stores": path.resolve(__dirname, "./src/stores"),
+      "@services": path.resolve(__dirname, "./src/services"),
+      "@styles": path.resolve(__dirname, "./src/styles"),
+      "@hooks": path.resolve(__dirname, "./src/hooks"),
+      "@utils": path.resolve(__dirname, "./src/utils"),
+      "@types": path.resolve(__dirname, "./src/types"),
+      "@assets": path.resolve(__dirname, "./src/assets"),
+      "@shared/types": path.resolve(__dirname, "../shared/types"),
     },
   },
   css: {
@@ -24,36 +27,37 @@ export default defineConfig({
       less: {
         javascriptEnabled: true,
         modifyVars: {
-          '@primary-color': '#1890ff',
-          '@link-color': '#1890ff',
-          '@border-radius-base': '6px',
+          "@primary-color": "#1890ff",
+          "@link-color": "#1890ff",
+          "@border-radius-base": "6px",
         },
       },
     },
   },
   server: {
     port: 8080,
+    allowedHosts: ["5607xunj9701.vicp.fun", ".vicp.fun"],
     proxy: {
-      '/api': {
-        target: 'http://localhost:3001',
+      "/api": {
+        target: "http://localhost:3001",
         changeOrigin: true,
       },
-      '/uploads': {
-        target: 'http://localhost:3001',
+      "/uploads": {
+        target: "http://localhost:3001",
         changeOrigin: true,
       },
     },
   },
   build: {
-    outDir: 'dist',
+    outDir: "dist",
     sourcemap: true,
     rollupOptions: {
       output: {
         manualChunks: {
-          'antd': ['antd', '@ant-design/icons', '@ant-design/pro-components'],
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          antd: ["antd", "@ant-design/icons", "@ant-design/pro-components"],
+          "react-vendor": ["react", "react-dom", "react-router-dom"],
         },
       },
     },
   },
-})
+});
