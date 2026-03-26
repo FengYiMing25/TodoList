@@ -135,15 +135,20 @@ const Wardrobe: React.FC = () => {
     try {
       const values = await form.validateFields()
 
-      const finalImageUrl = await uploadPendingFile()
-      if (finalImageUrl === null && localPreview) {
-        return
+      let finalImageUrl = imageUrl
+      if (localPreview) {
+        const uploadedUrl = await uploadPendingFile()
+        if (uploadedUrl === null) {
+          message.error('图片上传失败，请重试')
+          return
+        }
+        finalImageUrl = uploadedUrl
       }
 
       const data: CreateWardrobeRequest | UpdateWardrobeRequest = {
         ...values,
         purchaseDate: values.purchaseDate.format('YYYY-MM-DD'),
-        imageUrl: finalImageUrl || imageUrl,
+        imageUrl: finalImageUrl,
       }
 
       if (editingItem) {
@@ -153,6 +158,7 @@ const Wardrobe: React.FC = () => {
         await createItem(data as CreateWardrobeRequest)
         message.success('添加成功')
       }
+
       handleCloseDialog()
       actionRef.current?.reload()
     } catch (error) {
