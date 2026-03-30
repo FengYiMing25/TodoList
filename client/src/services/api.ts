@@ -32,14 +32,14 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => {
     const data = response.data;
-    if (data && typeof data === 'object' && 'success' in data && 'data' in data) {
+    if (data && typeof data === "object" && "success" in data && "data" in data) {
       return data.data;
     }
     return response.data;
   },
   (error: AxiosError<{ message?: string }>) => {
     if (error.response?.status === 401) {
-      const isAuthPage = window.location.pathname === '/login' || window.location.pathname === '/register';
+      const isAuthPage = window.location.pathname === "/login";
       if (!isAuthPage) {
         useAuthStore.getState().logout();
         window.location.href = "/login";

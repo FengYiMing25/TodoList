@@ -4,7 +4,6 @@ import { useAuthStore } from '@stores/authStore'
 import Layout from '@components/Layout'
 import GlobalLoading from '@components/GlobalLoading'
 import Login from '@pages/Login'
-import Register from '@pages/Register'
 import Dashboard from '@pages/Dashboard'
 import TodoList from '@pages/TodoList'
 import Categories from '@pages/Categories'
@@ -15,21 +14,21 @@ import Wardrobe from '@pages/Wardrobe'
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading, isInitialized } = useAuthStore()
-  
+
   if (!isInitialized || isLoading) {
     return <GlobalLoading />
   }
-  
+
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />
 }
 
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading, isInitialized } = useAuthStore()
-  
+
   if (!isInitialized || isLoading) {
     return <GlobalLoading />
   }
-  
+
   return !isAuthenticated ? <>{children}</> : <Navigate to="/" replace />
 }
 
@@ -47,14 +46,6 @@ function App() {
         element={
           <PublicRoute>
             <Login />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/register"
-        element={
-          <PublicRoute>
-            <Register />
           </PublicRoute>
         }
       />

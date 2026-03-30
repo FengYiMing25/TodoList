@@ -1,52 +1,202 @@
-.container {
+.loginPage {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.leftPanel {
+  width: 45%;
+  height: 100%;
+  background-color: var(--primary-color, #6c3ff5);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.brandSection {
+  position: absolute;
+  top: 40px;
+  left: 40px;
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.rightPanel {
+  width: 55%;
+  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #1890ff 0%, #722ed1 100%);
+  background-color: var(--bg-primary);
 }
 
-.card {
+.formContainer {
   width: 100%;
-  max-width: 400px;
-  border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 380px;
+  padding: 20px;
+}
 
-  .ant-card-body {
-    padding: 32px;
+.formHeader {
+  margin-bottom: 32px;
+  h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+  }
+  p {
+    font-size: 16px;
+    color: var(--text-secondary);
   }
 }
 
-.header {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.title {
-  margin: 0 0 8px 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: #333;
-}
-
-.subtitle {
-  margin: 0;
-  color: #999;
-}
-
-.footer {
-  margin-top: 16px;
-  text-align: center;
-  color: #666;
-}
-
-.link {
-  color: #1890ff;
-  text-decoration: none;
-  font-weight: 500;
-  margin-left: 4px;
-
+.forgotPassword {
+  float: right;
+  color: var(--primary-color, #6c3ff5);
   &:hover {
     text-decoration: underline;
+  }
+}
+
+.signUp {
+  margin-top: 24px;
+  text-align: center;
+  color: var(--text-secondary);
+  a {
+    color: var(--primary-color, #6c3ff5);
+    font-weight: 600;
+    cursor: pointer;
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.switchMode {
+  margin-top: 24px;
+  text-align: center;
+  color: var(--text-secondary);
+  a {
+    color: var(--primary-color, #6c3ff5);
+    font-weight: 600;
+    cursor: pointer;
+    margin-left: 4px;
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.charactersWrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.charactersContainer {
+  position: relative;
+  width: 420px;
+  height: 320px;
+  transform: scale(1.2);
+}
+
+.character {
+  position: absolute;
+  bottom: 0;
+  transition: transform 0.7s ease-in-out;
+  transform-origin: bottom center;
+}
+
+.purple {
+  left: 50px;
+  width: 140px;
+  height: 360px;
+  background-color: #5823f7;
+  border-radius: 12px 12px 0 0;
+  z-index: 1;
+}
+
+.black {
+  left: 175px;
+  width: 95px;
+  height: 250px;
+  background-color: #2d2d2d;
+  border-radius: 10px 10px 0 0;
+  z-index: 2;
+}
+
+.orange {
+  left: 0;
+  width: 180px;
+  height: 160px;
+  background-color: #ff9b6b;
+  border-radius: 90px 90px 0 0;
+  z-index: 3;
+}
+
+.yellow {
+  left: 240px;
+  width: 110px;
+  height: 185px;
+  background-color: #e8d754;
+  border-radius: 55px 55px 0 0;
+  z-index: 4;
+}
+
+.eyes {
+  position: absolute;
+  display: flex;
+  gap: 12px;
+  transition: all 0.7s ease-in-out;
+}
+
+.pupilEyes {
+  position: absolute;
+  display: flex;
+  gap: 20px;
+  transition: all 0.2s ease-out;
+}
+
+.eyeBall {
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: height 0.15s ease-in-out;
+  overflow: hidden;
+}
+
+.eyeBallPupil {
+  border-radius: 50%;
+  transition: transform 0.1s ease-out;
+}
+
+.pupil {
+  border-radius: 50%;
+  transition: transform 0.1s ease-out;
+}
+
+.mouth {
+  position: absolute;
+  width: 50px;
+  height: 4px;
+  background-color: #2d2d2d;
+  border-radius: 2px;
+  transition: all 0.2s ease-out;
+}
+
+@media (max-width: 768px) {
+  .leftPanel {
+    display: none;
+  }
+
+  .rightPanel {
+    width: 100%;
   }
 }
