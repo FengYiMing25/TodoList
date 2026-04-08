@@ -8,7 +8,7 @@
 
 - `pull_request` 和 `push` 自动执行检查
 - 前端和后端分别执行构建与测试
-- 只有 `main` 分支推送时才会触发正式部署
+- 只有 `master` 分支推送时才会触发正式部署
 - GitHub Actions 通过 SSH 连接云服务器
 - 服务器使用 Docker Compose 启动前后端容器
 - 发布完成后自动执行健康检查
@@ -28,7 +28,7 @@
 1. 开发代码并提交到 GitHub。
 2. 创建 Pull Request。
 3. GitHub Actions 自动执行前后端构建与测试。
-4. PR 合并到 `main`。
+4. PR 合并到 `master`。
 5. GitHub Actions 通过 SSH 登录服务器。
 6. 远程写入 `.env.production`。
 7. 服务器拉取最新代码并执行 Docker Compose 更新。
@@ -168,7 +168,7 @@ MAX_FILE_SIZE=10485760
 仅在以下条件满足时触发：
 
 - 事件是 `push`
-- 分支是 `main`
+- 分支是 `master`
 - 前后端检查全部通过
 
 执行内容：
@@ -225,8 +225,8 @@ APP_DIR=/opt/todo-list bash scripts/healthcheck.sh
 确认无误后，如果要回到主分支继续正常发布：
 
 ```bash
-git checkout main
-git pull --ff-only origin main
+git checkout master
+git pull --ff-only origin master
 ```
 
 如果你后面希望把回滚也做成自动化脚本，我可以继续帮你补。

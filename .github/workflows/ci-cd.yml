@@ -73,7 +73,7 @@ jobs:
     needs:
       - client-checks
       - server-checks
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     concurrency:
       group: todo-list-production
       cancel-in-progress: false
@@ -110,4 +110,4 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_APP_DIR: ${{ secrets.SSH_APP_DIR }}
         run: |
-          ssh -p "${SSH_PORT:-22}" "${SSH_USER}@${SSH_HOST}" "cd '${SSH_APP_DIR}' && git fetch origin main && git checkout main && git pull --ff-only origin main && chmod +x scripts/deploy.sh scripts/healthcheck.sh && APP_DIR='${SSH_APP_DIR}' bash scripts/deploy.sh && APP_DIR='${SSH_APP_DIR}' bash scripts/healthcheck.sh"
+          ssh -p "${SSH_PORT:-22}" "${SSH_USER}@${SSH_HOST}" "cd '${SSH_APP_DIR}' && git fetch origin master && git checkout master && git pull --ff-only origin master && chmod +x scripts/deploy.sh scripts/healthcheck.sh && APP_DIR='${SSH_APP_DIR}' bash scripts/deploy.sh && APP_DIR='${SSH_APP_DIR}' bash scripts/healthcheck.sh"
