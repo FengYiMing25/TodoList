@@ -9,13 +9,19 @@ import {
   getWardrobeStatistics,
 } from "../controllers/wardrobeController";
 import { authMiddleware } from "../middlewares/auth";
+import type {
+  CreateWardrobeRequest,
+  DiscardWardrobeRequest,
+  UpdateWardrobeRequest,
+  WardrobeQueryParams,
+} from "@shared/types";
 
 export default async function wardrobeRoutes(fastify: FastifyInstance) {
   fastify.get("/statistics", { preHandler: authMiddleware }, getWardrobeStatistics);
-  fastify.get("/", { preHandler: authMiddleware }, getWardrobeItems);
-  fastify.get("/:id", { preHandler: authMiddleware }, getWardrobeItemById);
-  fastify.post("/", { preHandler: authMiddleware }, createWardrobeItem);
-  fastify.put("/:id", { preHandler: authMiddleware }, updateWardrobeItem);
-  fastify.post("/:id/discard", { preHandler: authMiddleware }, discardWardrobeItem);
-  fastify.delete("/:id", { preHandler: authMiddleware }, deleteWardrobeItem);
+  fastify.get<{ Querystring: WardrobeQueryParams }>("/", { preHandler: authMiddleware }, getWardrobeItems);
+  fastify.get<{ Params: { id: string } }>("/:id", { preHandler: authMiddleware }, getWardrobeItemById);
+  fastify.post<{ Body: CreateWardrobeRequest }>("/", { preHandler: authMiddleware }, createWardrobeItem);
+  fastify.put<{ Params: { id: string }; Body: UpdateWardrobeRequest }>("/:id", { preHandler: authMiddleware }, updateWardrobeItem);
+  fastify.post<{ Params: { id: string }; Body: DiscardWardrobeRequest }>("/:id/discard", { preHandler: authMiddleware }, discardWardrobeItem);
+  fastify.delete<{ Params: { id: string } }>("/:id", { preHandler: authMiddleware }, deleteWardrobeItem);
 }

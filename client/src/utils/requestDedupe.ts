@@ -15,5 +15,5 @@ export function dedupeRequest<T>(key: string, request: () => Promise<T>): Promis
 }
 
 export function createDedupeKey(prefix: string, ...args: (string | number | undefined)[]): string {
-  return [prefix, ...args.filter(Boolean)].join(':')
+  return [prefix, ...args.filter((arg) => arg !== undefined)].join(':')
 }
